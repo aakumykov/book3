@@ -35,6 +35,29 @@ class Book
 
 	def prepare
 		puts "#{self.class}.#{__method__}()"
+
+		until self.prepare_complete? do
+			self.process_next_page
+		end
+	end
+
+	def prepare_complete?
+		puts "#{self.class}.#{__method__}()"
+	end
+
+	def process_next_page
+		puts "#{self.class}.#{__method__}()"
+
+		src = self.get_next_link
+
+		raw_data = self.load_page(src)
+		 self.collect_links(raw_data)
+
+		data = self.process_page(raw_data)
+		 page = data[:text]
+		 related_content = data[:related_content]
+
+		self.save_page(page, related_content)
 	end
 
 	def save
