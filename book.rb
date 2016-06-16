@@ -48,16 +48,17 @@ class Book
 	def process_next_page
 		puts "#{self.class}.#{__method__}()"
 
-		src = self.get_next_link
+		src = get_fresh_link
 
-		raw_data = self.load_page(src)
-		 self.collect_links(raw_data)
+		raw_page = load_page(source: src)
 
-		data = self.process_page(raw_data)
-		 page = data[:text]
-		 related_content = data[:related_content]
+		collect_links(raw_page)
 
-		self.save_page(page, related_content)
+		page = process_page(raw_page)
+
+		content = process_related_content(page)
+
+		save_data(page,content)
 	end
 
 	def save
