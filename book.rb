@@ -47,18 +47,18 @@ class Book
 
 	def process_next_page
 		puts "#{self.class}.#{__method__}()"
+		
+		lnk = get_next_link
+		rules = find_rules(lnk)
 
-		src = get_fresh_link
+		raw_page = load_page(lnk)
 
-		raw_page = load_page(source: src)
-
-		collect_links(raw_page)
+		collect_links(raw_page, rules)
 
 		page = process_page(raw_page)
-
-		content = process_related_content(page)
-
-		save_data(page,content)
+		media = load_media(page,rules)
+		
+		save_results(page, media)
 	end
 
 	def save
