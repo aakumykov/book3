@@ -22,6 +22,7 @@ class Book
 		@depth = 0
 	end
 
+
 	def title=(a_title)
 		raise 'некорректное название книги' if a_title.strip.empty?
 		@title = a_title
@@ -38,15 +39,17 @@ class Book
 		@language = a_language
 	end
 
+
 	def add_source(src)
 		@source << src.to_s
 	end
 
+
 	def prepare
 		puts "#{self.class}.#{__method__}()"
 
-		until self.prepare_complete? do
-			self.process_next_page
+		until prepare_complete? do
+			process_next_page
 			puts ''
 		end
 
@@ -85,6 +88,21 @@ class Book
 
 	def save
 		puts "#{self.class}.#{__method__}()"
+	end
+end
+
+
+class Msg
+	def self.debug(msg)
+		puts "ОТЛАДКА: #{msg}"
+	end
+	
+	def self.info(msg)
+		puts msg
+	end
+	
+	def self.error(msg)
+		STDERR.puts "ОШИБКА: #{msg}"
 	end
 end
 
