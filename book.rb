@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 #coding: UTF-8
 
+require 'sqlite3'
 
 class Book
 	attr_reader :title, :author, :language
@@ -20,6 +21,23 @@ class Book
 		@page_count = 0
 		@error_count = 0
 		@depth = 0
+		
+		# настройка БД
+		@@db_name = 'links.sqlite3'
+		@@table_name = 'table1'
+
+		@@db = SQLite3::Database.new @@db_name
+		@@db.execute("PRAGMA journal_mode = OFF")
+
+		@@db.execute("DROP TABLE IF EXISTS #{@@table_name}")
+		@@db.execute("
+			CREATE TABLE #{@@table_name} (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				parent_id INTEGER,
+				uri TEXT,
+				processed BOOLEAN DEFAULT 0
+			)"
+		)
 	end
 
 
@@ -41,7 +59,11 @@ class Book
 
 
 	def add_source(src)
-		@source << src.to_s
+		@@db.execute(
+			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
+			0,
+			src
+		)
 	end
 
 
@@ -73,7 +95,7 @@ class Book
 		
 		@page_count += 1
 
-		# lnk = get_next_link
+		lnk = get_next_link
 		# rules = find_rules(lnk)
 
 		# raw_page = load_page(lnk)
@@ -84,6 +106,17 @@ class Book
 		# media = load_media(page,rules)
 		
 		# save_results(page, media)
+	end
+
+	def get_next_link
+		puts "#{self.class}.#{__method__}()"
+		
+		res = @@db.execute("SELECT uri FROM #{@@table_name} WHERE processed=0 LIMIT 1")
+		uri = res.first.first
+		
+		Msg::debug("свежая ссылка: #{uri}")
+		
+		uri
 	end
 
 	def save
