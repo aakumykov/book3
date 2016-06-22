@@ -4,36 +4,6 @@
 require 'uri'
 require 'net/http'
 
-def detectCharset(arg)
-	puts "#{__method__}()"
-
-    page = arg[:page]
-    headers = arg.fetch(:headers,{})
-
-    page_charset = nil
-    headers_charset = nil
-
-    pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
-
-    res = page.encode('UTF-8',{:replace => '_',:invalid => :replace,:undef => :replace}).match(pattern)
-    page_charset = res[:charset].upcase if not res.nil?
-
-    headers.each_pair { |k,v|
-      if 'content-type'==k.downcase.strip then
-        res = v.first.downcase.strip.match(pattern)
-        headers_charset = res[:charset].upcase if not res.nil?
-      end
-    }
-
-    return page_charset if headers_charset.nil?
-    return headers_charset
-    
-    #~ return {
-      #~ :headers_charset => headers_charset,
-      #~ :page_charset => page_charset,
-    #~ }
-end
-
 def load_page(uri)
 	puts "#{__method__}()"
 
@@ -71,16 +41,45 @@ def load_page(uri)
 	  end
 	}
   
-  # перекодировка в UTF-8
-  #charset = detectCharset(data)
-  #puts "charset: #{charset}"
-  # page = data[:page].encode(
-  # 	'UTF-8', 
-  # 	charset, 
-  # 	{ :replace => '_', :invalid => :replace, :undef => :replace }
-  # )
-  
-  return page
+  return data
+end
+
+def recode_page(page, headers, target_charset='UTF-8')
+	page_charset = nil
+	headers_charset = nil
+	
+	pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
+
+	page_charset = page.match(pattern)
+	page_charset = page_charset[:charset] if not page_charset.nil?
+	
+	headers.each_pair { |k,v|
+		if 'content-type'==k.downcase.strip then
+			res = v.first.downcase.strip.match(pattern)
+			headers_charset = res[:charset].upcase if not res.nil?
+		end
+    }
+    
+    page_charset = headers_charset if page_charset.nil?
+    page_charset = 'ISO-8859-1' if headers_charset.nil?
+
+    puts "page_charset: #{page_charset}"
+
+    page = page.encode(
+		target_charset, 
+		page_charset, 
+		{ :replace => '_', :invalid => :replace, :undef => :replace }
+	)
+
+	page = page.gsub(pattern, "charset='UTF-8'")
+
+	return page
+end
+
+def get_page(uri)
+	data = load_page(uri)
+	page = recode_page(data[:page], data[:headers])
+	return page
 end
 
 case ARGV.count
@@ -91,7 +90,7 @@ else
 	exit 1
 end
 
-page = load_page(uri)
+page = get_page(uri)
 
 puts "page.class: #{page.class}"
 puts "page.lines.count: #{page.lines.count}"

@@ -67,7 +67,6 @@ class Book
 		)
 	end
 
-
 	def prepare
 		puts "#{self.class}.#{__method__}()"
 
@@ -78,6 +77,13 @@ class Book
 
 		puts "Подготовка завершена"
 	end
+
+	def save
+		puts "#{self.class}.#{__method__}()"
+	end
+
+
+	private
 
 	def prepare_complete?
 		puts "#{self.class}.#{__method__}()"
@@ -101,12 +107,12 @@ class Book
 		
 		# rules = find_rules(lnk)
 
-		raw_page = load_page(lnk)
-		Msg::debug "размер страницы: #{raw_page.lines.count} строк / #{raw_page.bytes.count} байт"
+		initial_page = get_page(lnk)
+		Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
 
-		collect_links(raw_page, rules)
+		#collect_links(initial_page, rules)
 
-		# page = process_page(raw_page)
+		# page = process_page(initial_page)
 		# media = load_media(page,rules)
 		
 		# save_results(page, media)
@@ -120,7 +126,7 @@ class Book
 	end
 	
 	def load_page(uri)
-		puts "#{__method__}(#{uri})"
+		puts "#{__method__}()"
 
 		redirects_limit = 3
 		
@@ -156,27 +162,51 @@ class Book
 		  end
 		}
 	  
-		# перекодировка в UTF-8
-		#charset = detectCharset(data)
-		#puts "charset: #{charset}"
-		# page = data[:page].encode(
-		# 	'UTF-8', 
-		# 	charset, 
-		# 	{ :replace => '_', :invalid => :replace, :undef => :replace }
-		# )
+	  return data
+	end
 
-		page = data[:page]
-	  
+	def recode_page(page, headers, target_charset='UTF-8')
+		page_charset = nil
+		headers_charset = nil
+		
+		pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
+
+		page_charset = page.match(pattern)
+		page_charset = page_charset[:charset] if not page_charset.nil?
+		
+		headers.each_pair { |k,v|
+			if 'content-type'==k.downcase.strip then
+				res = v.first.downcase.strip.match(pattern)
+				headers_charset = res[:charset].upcase if not res.nil?
+			end
+	    }
+	    
+	    page_charset = headers_charset if page_charset.nil?
+	    page_charset = 'ISO-8859-1' if headers_charset.nil?
+
+	    puts "page_charset: #{page_charset}"
+
+	    page = page.encode(
+			target_charset, 
+			page_charset, 
+			{ :replace => '_', :invalid => :replace, :undef => :replace }
+		)
+
+		page = page.gsub(pattern, "charset='UTF-8'")
+
 		return page
 	end
+
+	def get_page(uri)
+		data = load_page(uri)
+		page = recode_page(data[:page], data[:headers])
+		return page
+	end
+
 
 	def collect_links(page)
 		Msg::debug("#{self.class}.#{__method__}()")
 		#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/i)
-	end
-
-	def save
-		puts "#{self.class}.#{__method__}()"
 	end
 end
 
