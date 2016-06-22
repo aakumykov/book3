@@ -68,7 +68,7 @@ class Book
 	end
 
 	def prepare
-		puts "#{self.class}.#{__method__}()"
+		Msg::debug("#{self.class}.#{__method__}()")
 
 		until prepare_complete? do
 			process_next_page
@@ -79,14 +79,38 @@ class Book
 	end
 
 	def save
-		puts "#{self.class}.#{__method__}()"
+		Msg::debug("#{self.class}.#{__method__}()")
 	end
 
 
 	private
+	
+	def process_next_page
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		@page_count += 1
+
+		lnk = get_next_link
+		
+			Msg::debug("следующая ссылка: #{lnk}")
+		
+		#rule = get_rule(lnk)
+		
+
+		initial_page = get_page(lnk)
+		
+			Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
+
+		#collect_links(initial_page, rules)
+
+		# page = process_page(initial_page)
+		# media = load_media(page,rules)
+		
+		# save_results(page, media)
+	end
 
 	def prepare_complete?
-		puts "#{self.class}.#{__method__}()"
+		Msg::debug("#{self.class}.#{__method__}()")
 
 		puts "page_limit: #{@page_limit}, page_count: #{@page_count}"
 		puts "error_limit: #{@error_limit}, error_count: #{@error_count}"
@@ -97,36 +121,32 @@ class Book
 		return true if @depth > @depth_limit
 	end
 
-	def process_next_page
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		@page_count += 1
-
-		lnk = get_next_link
-		#Msg::debug("следующая ссылка: #{lnk}")
-		
-		# rules = find_rules(lnk)
-
-		initial_page = get_page(lnk)
-		Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
-
-		#collect_links(initial_page, rules)
-
-		# page = process_page(initial_page)
-		# media = load_media(page,rules)
-		
-		# save_results(page, media)
-	end
-
 	def get_next_link
-		puts "#{self.class}.#{__method__}()"
+		Msg::debug("#{self.class}.#{__method__}()")
 		
 		res = @@db.execute("SELECT uri FROM #{@@table_name} WHERE processed=0 LIMIT 1")
 		res.first.first
 	end
 	
+	def get_rule(uri)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		uri = URI(uri)
+		
+		case uri.host
+		when 'opennet.ru'
+			require 'rules/opennet_ru.rb'
+			rules = OpennetRu.new
+		when 'ru.wikipedia.org'
+			require 'ru_wikipedia.org_rb'
+			rules = RuWikipediaOrg.new
+		else
+			return rules = nil
+		end
+	end
+	
 	def load_page(uri)
-		puts "#{__method__}()"
+		Msg::debug("#{self.class}.#{__method__}()")
 
 		redirects_limit = 3
 		
