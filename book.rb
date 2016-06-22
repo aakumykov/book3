@@ -104,7 +104,7 @@ class Book
 		raw_page = load_page(lnk)
 		Msg::debug "размер страницы: #{raw_page.lines.count} строк / #{raw_page.bytes.count} байт"
 
-		# collect_links(raw_page, rules)
+		collect_links(raw_page, rules)
 
 		# page = process_page(raw_page)
 		# media = load_media(page,rules)
@@ -168,6 +168,11 @@ class Book
 		page = data[:page]
 	  
 		return page
+	end
+
+	def collect_links(page)
+		Msg::debug("#{self.class}.#{__method__}()")
+		#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/i)
 	end
 
 	def save
