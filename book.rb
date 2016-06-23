@@ -241,12 +241,23 @@ class Book
 		
 		links.map { |lnk|
 			lnk = URI(lnk)
+			
 			lnk.scheme = base_uri.scheme if lnk.scheme.nil?
+
 			lnk.host = base_uri.host if lnk.host.nil?
-			lnk
+			
+			lnk.to_s.gsub!(/\/+$/,'')
 		}
 		
 			Msg::debug(", собрано ссылок: #{links.count}")
+		
+		puts links.count
+		
+		links.keep_if { |lnk|
+			lnk.match( Regexp.union(rules.links) )
+		}
+		
+		puts links.count
 		
 		return links
 	end
