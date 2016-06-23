@@ -231,13 +231,24 @@ class Book
 	end
 
 	def collect_links(params)
-		Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
-		uri = params[:uri]
+		base_uri = URI(params[:uri])
 		page = params[:page]
 		rules = params[:rules]
 		
-		#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/i)
+		links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map{ |h| h.first.strip }
+		
+		links.map { |lnk|
+			lnk = URI(lnk)
+			lnk.scheme = base_uri.scheme if lnk.scheme.nil?
+			lnk.host = base_uri.host if lnk.host.nil?
+			lnk
+		}
+		
+			Msg::debug(", собрано ссылок: #{links.count}")
+		
+		return links
 	end
 	
 	def process_page(page, rules)
