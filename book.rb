@@ -90,15 +90,11 @@ class Book
 		
 		@page_count += 1
 
-		lnk = get_next_link
-		
-			Msg::debug(" следующая ссылка: #{lnk}")
+		lnk = get_link
 		
 		rules = get_rule(lnk)
 
 		initial_page = get_page(lnk)
-		
-			Msg::debug " размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
 
 		collect_links(uri: lnk, page: initial_page, rules: rules)
 
@@ -109,22 +105,24 @@ class Book
 	end
 
 	def prepare_complete?
-		Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 
-		puts " pages: #{@page_count}/#{@page_limit}"
-		puts " errors: #{@error_count}/#{@error_limit}"
-		puts " depth: #{@depth}/#{@depth_limit}"
+		Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
 
 		return true if @page_count >= @page_limit
 		return true if @error_count >= @error_limit
 		return true if @depth > @depth_limit
 	end
 
-	def get_next_link
-		Msg::debug("#{self.class}.#{__method__}()")
+	def get_link
+		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
 		res = @@db.execute("SELECT uri FROM #{@@table_name} WHERE processed=0 LIMIT 1")
-		res.first.first
+		lnk = res.first.first
+		
+		Msg::debug("-> #{lnk}")
+		
+		return lnk
 	end
 	
 	def get_rule(uri)
@@ -147,13 +145,18 @@ class Book
 	end
 
 	def get_page(uri)
+		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+		
 		data = load_page(uri)
 		page = recode_page(data[:page], data[:headers])
+		
+		Msg::debug "-> #{page.lines.count} строк, #{page.bytes.count} байт"
+		
 		return page
 	end
 	
 	def load_page(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
 		redirects_limit = 3
 		
@@ -211,7 +214,7 @@ class Book
 	    page_charset = headers_charset if page_charset.nil?
 	    page_charset = 'ISO-8859-1' if headers_charset.nil?
 
-	    puts "page_charset: #{page_charset}"
+	    #puts "page_charset: #{page_charset}"
 
 	    page = page.encode(
 			target_charset, 
@@ -249,13 +252,14 @@ end
 
 
 class Msg
-	def self.debug(msg)
-		puts msg
-	end
-	
-	#~ def self.debug(msg, params={})
-		#~ params.fetch(:nobr,false) ? print msg : pts msg
+	#~ def self.debug(msg)
+		#~ puts msg
 	#~ end
+	
+	def self.debug(msg, params={})
+		params.fetch(:nobr,false) ? print(msg) : puts(msg)
+		#puts "#{msg}, nobr: #{params.fetch(:nobr,false)}"
+	end
 	
 	def self.info(msg)
 		puts msg
