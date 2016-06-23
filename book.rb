@@ -8,6 +8,11 @@ class Book
 	attr_reader :title, :author, :language
 	attr_accessor :page_limit, :error_limit, :depth_limit
 
+	@@db_name = 'links.sqlite3'
+	@@table_name = 'table1'
+	
+	@@rules_dir = './rules'
+
 	def initialize
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
@@ -24,9 +29,6 @@ class Book
 		@depth = 0
 		
 		# настройка БД
-		@@db_name = 'links.sqlite3'
-		@@table_name = 'table1'
-
 		@@db = SQLite3::Database.new @@db_name
 		@@db.execute("PRAGMA journal_mode = OFF")
 
@@ -60,6 +62,8 @@ class Book
 
 
 	def add_source(src)
+		src.strip!
+	
 		@@db.execute(
 			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
 			0,
@@ -128,20 +132,19 @@ class Book
 	def get_rule(uri)
 		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
-		return nil
+		host = URI(uri).host
+		file_name = host.gsub('.','_') + '.rb'
+		class_name = host.split('.').map{|c| c.capitalize }.join
 		
-		#~ uri = URI(uri)
+			Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
 		
-		#~ case uri.host
-		#~ when 'opennet.ru'
-			#~ require 'rules/opennet_ru.rb'
-			#~ rules = OpennetRu.new
-		#~ when 'ru.wikipedia.org'
-			#~ require 'ru_wikipedia.org_rb'
-			#~ rules = RuWikipediaOrg.new
-		#~ else
-			#~ return rules = nil
-		#~ end
+		case host
+		when 'opennet.ru'
+			require "#{@@rules_dir}/#{file_name}"
+			rule = Object.const_get(class_name).new
+		else
+			return rule = nil
+		end
 	end
 
 	def get_page(uri)
