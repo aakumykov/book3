@@ -85,65 +85,28 @@ class Book
 
 	private
 	
-	class Processor
-		def initialize(uri)
-			Msg::debug("#{self.class}.#{__method__}(uri)")
-			
-			#@rules = get_rule(@uri.to_s)
-		end
-	
-		def act
-			Msg::debug("#{self.class}.#{__method__}()")
-
-			rule = get_rule(@uri.to_s)
-			
-			#initial_page = get_page(lnk)
-		
-			#	Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
-
-			#collect_links(initial_page, rules)
-
-			# page = process_page(initial_page)
-			# media = load_media(page,rules)
-			
-			return [nil, nil]
-		end
-		
-		def get_rule(uri)
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			return {}
-			
-			uri = URI(uri)
-			
-			case uri.host
-			when 'opennet.ru'
-				require 'rules/opennet_ru.rb'
-				rules = OpennetRu.new
-			when 'ru.wikipedia.org'
-				require 'ru_wikipedia.org_rb'
-				rules = RuWikipediaOrg.new
-			else
-				return rules = nil
-			end
-		end
-		
-		
-	end
-	
 	def process_next_page
-	
-		lnk = get_next_link
-				
-			Msg::debug("следующая ссылка: #{lnk}")
-		
-		processor = Processor.new(lnk)
-		
-		page, media = processor.act
-
-		# save_results(page, media)
+		Msg::debug("#{self.class}.#{__method__}()")
 		
 		@page_count += 1
+
+		lnk = get_next_link
+		
+			Msg::debug("следующая ссылка: #{lnk}")
+		
+		#rule = get_rule(lnk)
+		
+
+		initial_page = get_page(lnk)
+		
+			Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
+
+		#collect_links(initial_page, rules)
+
+		# page = process_page(initial_page)
+		# media = load_media(page,rules)
+		
+		# save_results(page, media)
 	end
 
 	def prepare_complete?
@@ -163,6 +126,23 @@ class Book
 		
 		res = @@db.execute("SELECT uri FROM #{@@table_name} WHERE processed=0 LIMIT 1")
 		res.first.first
+	end
+	
+	def get_rule(uri)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		uri = URI(uri)
+		
+		case uri.host
+		when 'opennet.ru'
+			require 'rules/opennet_ru.rb'
+			rules = OpennetRu.new
+		when 'ru.wikipedia.org'
+			require 'ru_wikipedia.org_rb'
+			rules = RuWikipediaOrg.new
+		else
+			return rules = nil
+		end
 	end
 	
 	def load_page(uri)
