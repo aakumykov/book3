@@ -92,29 +92,28 @@ class Book
 
 		lnk = get_next_link
 		
-			Msg::debug("следующая ссылка: #{lnk}")
+			Msg::debug(" следующая ссылка: #{lnk}")
 		
-		#rule = get_rule(lnk)
-		
+		rules = get_rule(lnk)
 
 		initial_page = get_page(lnk)
 		
-			Msg::debug "размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
+			Msg::debug " размер страницы: #{initial_page.lines.count} строк / #{initial_page.bytes.count} байт"
 
-		#collect_links(initial_page, rules)
+		collect_links(uri: lnk, page: initial_page, rules: rules)
 
-		# page = process_page(initial_page)
-		# media = load_media(page,rules)
+		page = process_page(page, rules)
+		media = load_media(page, rules)
 		
-		# save_results(page, media)
+		save_results(page, media)
 	end
 
 	def prepare_complete?
 		Msg::debug("#{self.class}.#{__method__}()")
 
-		puts "page_limit: #{@page_limit}, page_count: #{@page_count}"
-		puts "error_limit: #{@error_limit}, error_count: #{@error_count}"
-		puts "depth_limit: #{@depth_limit}, depth: #{@depth}"
+		puts " pages: #{@page_count}/#{@page_limit}"
+		puts " errors: #{@error_count}/#{@error_limit}"
+		puts " depth: #{@depth}/#{@depth_limit}"
 
 		return true if @page_count >= @page_limit
 		return true if @error_count >= @error_limit
@@ -129,24 +128,32 @@ class Book
 	end
 	
 	def get_rule(uri)
-		Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
-		uri = URI(uri)
+		return nil
 		
-		case uri.host
-		when 'opennet.ru'
-			require 'rules/opennet_ru.rb'
-			rules = OpennetRu.new
-		when 'ru.wikipedia.org'
-			require 'ru_wikipedia.org_rb'
-			rules = RuWikipediaOrg.new
-		else
-			return rules = nil
-		end
+		#~ uri = URI(uri)
+		
+		#~ case uri.host
+		#~ when 'opennet.ru'
+			#~ require 'rules/opennet_ru.rb'
+			#~ rules = OpennetRu.new
+		#~ when 'ru.wikipedia.org'
+			#~ require 'ru_wikipedia.org_rb'
+			#~ rules = RuWikipediaOrg.new
+		#~ else
+			#~ return rules = nil
+		#~ end
+	end
+
+	def get_page(uri)
+		data = load_page(uri)
+		page = recode_page(data[:page], data[:headers])
+		return page
 	end
 	
 	def load_page(uri)
-		Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
 		redirects_limit = 3
 		
@@ -217,16 +224,26 @@ class Book
 		return page
 	end
 
-	def get_page(uri)
-		data = load_page(uri)
-		page = recode_page(data[:page], data[:headers])
-		return page
-	end
-
-
-	def collect_links(page)
+	def collect_links(params)
 		Msg::debug("#{self.class}.#{__method__}()")
+		
+		uri = params[:uri]
+		page = params[:page]
+		rules = params[:rules]
+		
 		#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/i)
+	end
+	
+	def process_page(page, rules)
+		Msg::debug("#{self.class}.#{__method__}()")
+	end
+	
+	def load_media(page, rules)
+		Msg::debug("#{self.class}.#{__method__}()")
+	end
+	
+	def save_results(page, media)
+		Msg::debug("#{self.class}.#{__method__}()")
 	end
 end
 
@@ -235,6 +252,10 @@ class Msg
 	def self.debug(msg)
 		puts msg
 	end
+	
+	#~ def self.debug(msg, params={})
+		#~ params.fetch(:nobr,false) ? print msg : pts msg
+	#~ end
 	
 	def self.info(msg)
 		puts msg
