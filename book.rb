@@ -225,7 +225,7 @@ class Book
 			{ :replace => '_', :invalid => :replace, :undef => :replace }
 		)
 
-		page = page.gsub(pattern, "charset='UTF-8'")
+		page = page.gsub(pattern, "charset=UTF-8")
 
 		return page
 	end
