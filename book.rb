@@ -249,15 +249,21 @@ class Book
 			lnk.to_s.gsub!(/\/+$/,'')
 		}
 		
-			Msg::debug(", собрано ссылок: #{links.count}")
-		
-		puts links.count
+			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 		
 		links.keep_if { |lnk|
-			lnk.match( Regexp.union(rules.links) )
+			is_match = false
+			begin
+				rules.links.each { |pattern|
+					raise 'match' if lnk.match(pattern)
+				}
+			rescue
+				is_match = true
+			end
+			is_match
 		}
 		
-		puts links.count
+			Msg::debug(", оставлено ссылок: #{links.count}")
 		
 		return links
 	end
