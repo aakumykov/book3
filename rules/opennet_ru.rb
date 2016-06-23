@@ -1,13 +1,18 @@
 #coding: UTF-8
 
 class OpennetRu
-	@@list = {
-		'/' => :MainPage,
-		'/opennews/art.shtml?num=[0-9]+$' => :NewsArticle,
+	attr_reader :links
+
+	@@rules = {
+		'/opennews/art\.shtml\?num=[0-9]+$' => :NewsArticle,
 	}
 	
+	def initialize
+		@links = @@rules.keys.sort_by { |k| k.length }.reverse
+	end
+	
 	def list
-		@@list
+		@@rules
 	end
 	
 	def MainPage(page)
