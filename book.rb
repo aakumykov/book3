@@ -97,15 +97,15 @@ class Book
 
 		lnk = get_link
 		
-		rules = get_rule(lnk)
+		rule = get_rule(lnk)
 
-		initial_page = get_page(lnk)
+		page = get_page(lnk)
 
-		collect_links(uri: lnk, page: initial_page, rules: rules)
+		collect_links(uri: lnk, page: page, rule: rule)
 
-		page = process_page(page, rules)
+		page = process_page(uri: lnk, page: page, rule: rule)
 		
-		media = load_media(page, rules)
+		media = load_media(page, rule)
 		
 		save_results(page, media)
 	end
@@ -237,7 +237,7 @@ class Book
 		
 		base_uri = URI(params[:uri])
 		page = params[:page]
-		rules = params[:rules]
+		rule = params[:rule]
 		
 		links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map{ |h| h.first.strip }
 		
@@ -253,26 +253,29 @@ class Book
 		
 			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 		
-		links.keep_if { |lnk|
-			is_match = false
-			begin
-				rules.links.each { |pattern|
-					raise 'match' if lnk.match(pattern)
-				}
-			rescue
-				is_match = true
-			end
-			is_match
-		}
+		links.keep_if { |lnk| rule.accept_link?(lnk) }
 		
 			Msg::debug(", оставлено ссылок: #{links.count}")
 		
 		return links
 	end
 	
-	def process_page(page, rules)
+	def process_page(params)
 		Msg::debug("#{self.class}.#{__method__}()")
+		
+		uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
+		page = params.fetch(:page,nil) or raise 'отсутствует страница'
+		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
+		
+			#Msg::debug(rule.class)
+		
+		#page_rule = get_page_rule(uri)
+		
+		
 	end
+	
+	#def get_page_rule(rules, uri)
+		
 	
 	def load_media(page, rules)
 		Msg::debug("#{self.class}.#{__method__}()")
