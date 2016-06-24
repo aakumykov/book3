@@ -138,7 +138,7 @@ class Book
 		file_name = host.gsub('.','_') + '.rb'
 		class_name = host.split('.').map{|c| c.capitalize }.join
 		
-			Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
+			#Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
 		
 		case host
 		when 'opennet.ru'
@@ -267,11 +267,8 @@ class Book
 		page = params.fetch(:page,nil) or raise 'отсутствует страница'
 		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
 		
-			#Msg::debug(rule.class)
-		
-		#page_rule = get_page_rule(uri)
-		
-		
+		processor_name = rule.get_processor(uri)
+		rule.send(processor_name, page)
 	end
 	
 	#def get_page_rule(rules, uri)
