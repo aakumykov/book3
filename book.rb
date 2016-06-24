@@ -268,7 +268,7 @@ class Book
 		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
 		
 		processor_name = rule.get_processor(uri)
-		rule.send(processor_name, page)
+		page = rule.send(processor_name, page)
 	end
 	
 	#def get_page_rule(rules, uri)
@@ -276,6 +276,8 @@ class Book
 	
 	def load_media(page, rules)
 		Msg::debug("#{self.class}.#{__method__}()")
+		
+		
 	end
 	
 	def save_results(page, media)

@@ -49,9 +49,11 @@ class OpennetRu
 	# "страничные" методы
 	def MainPage(page)
 		Msg::debug("#{self.class}.#{__method__}(page.size: #{page.size})")
+		page
 	end
 	
 	def NewsArticle(page)
 		Msg::debug("#{self.class}.#{__method__}(page.size: #{page.size})")
+		page
 	end
 end
