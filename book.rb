@@ -38,7 +38,8 @@ class Book
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				parent_id INTEGER,
 				uri TEXT,
-				processed BOOLEAN DEFAULT 0
+				processed BOOLEAN DEFAULT 0,
+				file TEXT
 			)"
 		)
 	end
@@ -103,6 +104,7 @@ class Book
 		collect_links(uri: lnk, page: initial_page, rules: rules)
 
 		page = process_page(page, rules)
+		
 		media = load_media(page, rules)
 		
 		save_results(page, media)
