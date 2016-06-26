@@ -4,15 +4,15 @@
 require 'uri'
 require 'net/http'
 
-def load_page(uri)
+def load_page(arg)
 	puts "#{__method__}()"
 
-	redirects_limit = 3
-	
-	raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-	
 	#uri = URI.escape(uri) if not uri.urlencoded?
-	uri = URI(uri)
+	
+	uri = URI(arg[:uri])
+    redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
+    
+	raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
 
 	data = {}
 
@@ -27,7 +27,7 @@ def load_page(uri)
 		when Net::HTTPRedirection then
 			location = response['location']
 			puts "перенаправление на '#{location}'"
-			data =  self.work(
+			data =  load_page(
 				:uri => location, 
 				:redirects_limit => (redirects_limit-1)
 			)
@@ -77,7 +77,7 @@ def recode_page(page, headers, target_charset='UTF-8')
 end
 
 def get_page(uri)
-	data = load_page(uri)
+	data = load_page(uri: uri)
 	page = recode_page(data[:page], data[:headers])
 	return page
 end

@@ -152,7 +152,7 @@ class Book
 	def get_page(uri)
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
-		data = load_page(uri)
+		data = load_page(uri: uri)
 		page = recode_page(data[:page], data[:headers])
 		
 		Msg::debug "-> #{page.lines.count} строк, #{page.bytes.count} байт"
@@ -160,15 +160,15 @@ class Book
 		return page
 	end
 	
-	def load_page(uri)
+	def load_page(arg)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
-		redirects_limit = 3
+		#uri = URI.escape(uri) if not uri.urlencoded?
+		
+		uri = URI(arg[:uri])
+		redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
 		
 		raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-		
-		#uri = URI.escape(uri) if not uri.urlencoded?
-		uri = URI(uri)
 
 		data = {}
 
@@ -182,8 +182,8 @@ class Book
 		  case response
 			when Net::HTTPRedirection then
 				location = response['location']
-				puts "перенаправление на '#{location}'"
-				data =  self.work(
+				Msg::debug("перенаправление на '#{location}'")
+				data =  load_page(
 					:uri => location, 
 					:redirects_limit => (redirects_limit-1)
 				)
