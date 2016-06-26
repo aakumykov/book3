@@ -235,27 +235,19 @@ class Book
 	def collect_links(params)
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
-		base_uri = URI(params[:uri])
 		page = params[:page]
 		rule = params[:rule]
 		
-		links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map{ |h| h.first.strip }
-		
-		links.map { |lnk|
-			lnk = URI(lnk)
-			
-			lnk.scheme = base_uri.scheme if lnk.scheme.nil?
-
-			lnk.host = base_uri.host if lnk.host.nil?
-			
-			lnk.to_s.gsub!(/\/+$/,'')
-		}
+		links = repair_uri(
+			base_uri: params[:uri],
+			uri: page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
+		)
 		
 			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 		
 		links.keep_if { |lnk| rule.accept_link?(lnk) }
 		
-			Msg::debug(", оставлено ссылок: #{links.count}")
+			Msg::debug(", оставлено: #{links.count}")
 		
 		return links
 	end
@@ -287,7 +279,7 @@ class Book
 	def load_images(page,rule)
 		Msg::debug("#{self.class}.#{__method__}()")
 		
-		images = page.scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/)
+		images = page.scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
 	end
 	
 	def load_audio(page,rule)
@@ -296,6 +288,31 @@ class Book
 	
 	def load_video(page,rule)
 		Msg::debug("#{self.class}.#{__method__}()")
+	end
+	
+	def repair_uri(params)
+		#Msg::debug("#{self.class}.#{__method__}(#{base_uri}, #{uri.class})")
+		
+			#uri.each do |u| puts "U: #{u}"; end; exit
+		
+		base_uri = URI(params[:base_uri])
+		uri = params[:uri]
+		
+		array_mode = uri.is_a?(Array)
+		
+		uri = [uri] if not array_mode
+		
+		uri.map { |one_uri|
+			one_uri.strip!
+			one_uri.gsub!(/\/+$/,'')
+			one_uri = URI(one_uri)
+			one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
+			one_uri.host = base_uri.host if one_uri.host.nil?
+			one_uri.to_s
+		}
+		
+		uri = uri.first if not array_mode
+		return uri
 	end
 	
 	def save_results(page, media)
@@ -333,7 +350,7 @@ book.language = 'ru'
 book.add_source 'http://opennet.ru'
 book.add_source 'http://geektimes.ru'
 
-book.page_limit = 3
+book.page_limit = 1
 
 book.prepare
 book.save
