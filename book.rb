@@ -105,7 +105,7 @@ class Book
 
 		page = process_page(uri: lnk, page: page, rule: rule)
 		
-		media = load_media(page, rule)
+		media = load_images(uri: lnk, page: page, rule: rule)
 		
 		save_results(page, media)
 	end
@@ -263,39 +263,25 @@ class Book
 		page = rule.send(processor_name, page)
 	end
 	
-	#def get_page_rule(rules, uri)
+	def load_images(params)
+		Msg::debug(" #{self.class}.#{__method__}()", nobr: true)
 		
-	
-	def load_media(page, rules)
-		Msg::debug("#{self.class}.#{__method__}()")
+		# Пока это функция-обёртка, параметры не фильтрую
 		
-		{
-			images: load_images(page, rules),
-			audio: load_audio(page, rules),
-			video: load_video(page, rules),
-		}
-	end
-	
-	def load_images(page,rule)
-		Msg::debug("#{self.class}.#{__method__}()")
+		image_links = repair_uri(
+			base_uri: params[:uri],
+			uri: params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
+		)
+			
+			Msg::debug(" -> #{image_links.count} картинок")
 		
-		images = page.scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-	end
-	
-	def load_audio(page,rule)
-		Msg::debug("#{self.class}.#{__method__}()")
-	end
-	
-	def load_video(page,rule)
-		Msg::debug("#{self.class}.#{__method__}()")
+		return image_links
 	end
 	
 	def repair_uri(params)
-		#Msg::debug("#{self.class}.#{__method__}(#{base_uri}, #{uri.class})")
-		
-			#uri.each do |u| puts "U: #{u}"; end; exit
-		
+
 		base_uri = URI(params[:base_uri])
+
 		uri = params[:uri]
 		
 		array_mode = uri.is_a?(Array)
