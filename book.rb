@@ -277,7 +277,25 @@ class Book
 	def load_media(page, rules)
 		Msg::debug("#{self.class}.#{__method__}()")
 		
+		{
+			images: load_images(page, rules),
+			audio: load_audio(page, rules),
+			video: load_video(page, rules),
+		}
+	end
+	
+	def load_images(page,rule)
+		Msg::debug("#{self.class}.#{__method__}()")
 		
+		images = page.scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/)
+	end
+	
+	def load_audio(page,rule)
+		Msg::debug("#{self.class}.#{__method__}()")
+	end
+	
+	def load_video(page,rule)
+		Msg::debug("#{self.class}.#{__method__}()")
 	end
 	
 	def save_results(page, media)
