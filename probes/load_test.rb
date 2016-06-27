@@ -45,6 +45,11 @@ def load_page(arg)
 end
 
 def recode_page(page, headers, target_charset='UTF-8')
+	puts "#{__method__}()"
+	puts "========== Headers: =========="
+	headers.each_pair { |k,v| puts "#{k}: #{v}" }
+	puts "=========================="
+
 	page_charset = nil
 	headers_charset = nil
 	
@@ -77,9 +82,34 @@ def recode_page(page, headers, target_charset='UTF-8')
 end
 
 def get_page(uri)
+	uri = uri.strip
+
 	data = load_page(uri: uri)
-	page = recode_page(data[:page], data[:headers])
-	return page
+	
+	content_type = data[:headers].fetch('content-type',[nil]).first.to_s
+	
+	f_name = uri.match(/\/([^\/]+)\.([a-z]+)$/)[1]
+	f_ext = content_type.match(/\/([a-z]+)$/)[1]
+		puts "f_name: #{f_name}"
+		puts "f_ext: #{f_ext}"
+	file_name = "#{f_name}.#{f_ext}"
+
+	case content_type.strip.downcase
+	when /^image\//
+		return {
+			type: :image,
+			format: f_ext,
+			file_name: file_name,
+			data: data[:page],
+		}
+	else
+		return {
+			type: :text,
+			format: :html,
+			file_name: file_name,
+			data: recode_page(data[:page], data[:headers]),
+		}
+	end
 end
 
 case ARGV.count
@@ -90,11 +120,12 @@ else
 	exit 1
 end
 
-page = get_page(uri)
+data = get_page(uri)
+page = data[:data]
 
 puts "page.class: #{page.class}"
 puts "page.lines.count: #{page.lines.count}"
 puts "page.size: #{page.size}"
 puts "page.bytes.count: #{page.bytes.count}"
 
-File.write('page.html',page)
+File.write(data[:file_name],data[:data])
