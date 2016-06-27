@@ -12,6 +12,7 @@ class Book
 	@@table_name = 'table1'
 	
 	@@rules_dir = './rules'
+	@@work_dir = 'book_tmp'
 
 	def initialize
 		@title = 'Новая книга'
@@ -42,6 +43,10 @@ class Book
 				file TEXT
 			)"
 		)
+		
+		if not Dir.exists?(@@work_dir) then
+			Dir.mkdir(@@work_dir) or raise "невозможно создать каталог #{@@work_dir}"
+		end
 	end
 
 
@@ -239,8 +244,8 @@ class Book
 		rule = params[:rule]
 		
 		links = repair_uri(
-			base_uri: params[:uri],
-			uri: page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
+			params[:uri],
+			page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
 		)
 		
 			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
@@ -263,26 +268,22 @@ class Book
 		page = rule.send(processor_name, page)
 	end
 	
+	# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
+	# перед загрузкой. Хэш используется для "локализации" html-страницы.
 	def load_images(params)
 		Msg::debug(" #{self.class}.#{__method__}()", nobr: true)
 		
-		# Пока это функция-обёртка, параметры не фильтрую
+		links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
+		native_links = {}
+		links.each { |lnk| native_links[lnk] = nil }
 		
-		image_links = repair_uri(
-			base_uri: params[:uri],
-			uri: params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-		)
-			
-			Msg::debug(" -> #{image_links.count} картинок")
-		
-		return image_links
+		#native_links.each_key { |lnk|
+		#	lnk = repair_uri(
 	end
 	
-	def repair_uri(params)
+	def repair_uri(base_uri, uri)
 
-		base_uri = URI(params[:base_uri])
-
-		uri = params[:uri]
+		base_uri = URI(base_uri)
 		
 		array_mode = uri.is_a?(Array)
 		
