@@ -118,6 +118,12 @@ class Book
 		
 		media = load_images(uri: lnk, page: page, rule: rule)
 		
+		media.each_pair { |orig_link,full_link|
+			page = page.gsub(orig_link,full_link) if full_link
+		}
+		
+		File.write('page.html', page)
+		
 		save_results(page, media)
 	end
 
@@ -317,6 +323,8 @@ class Book
 			
 			links_hash[orig_link] = image_file
 		}
+		
+		links_hash
 	end
 	
 	def repair_uri(base_uri, uri, opt={debug:false})
