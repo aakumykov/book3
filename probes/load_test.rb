@@ -4,6 +4,7 @@
 require 'uri'
 require 'net/http'
 
+# 
 def load_page(arg)
 	puts "#{__method__}()"
 
@@ -18,37 +19,38 @@ def load_page(arg)
 
 	Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
 
-	  request = Net::HTTP::Get.new(uri.request_uri)
-	  request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
-	  
-	  response = http.request request
+		request = Net::HTTP::Get.new(uri.request_uri)
+		request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
 
-	  case response
+		response = http.request request
+
+		case response
 		when Net::HTTPRedirection then
 			location = response['location']
 			puts "перенаправление на '#{location}'"
-			data =  load_page(
-				:uri => location, 
-				:redirects_limit => (redirects_limit-1)
+			data =  send(
+				__method__,
+				{ :uri => location, :redirects_limit => (redirects_limit-1) }
 			)
 		when Net::HTTPSuccess then
 			data = {
 				:headers => response.to_hash,
-				:page => response.body,
+				:data => response.body,
 			}
 		else
 			response.value
-	  end
+		end
 	}
+	
+	#puts "========== Headers: =========="
+	#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
+	#puts "=========================="
   
-  return data
+	return data
 end
 
 def recode_page(page, headers, target_charset='UTF-8')
 	puts "#{__method__}()"
-	puts "========== Headers: =========="
-	headers.each_pair { |k,v| puts "#{k}: #{v}" }
-	puts "=========================="
 
 	page_charset = nil
 	headers_charset = nil
@@ -82,35 +84,27 @@ def recode_page(page, headers, target_charset='UTF-8')
 end
 
 def get_page(uri)
-	uri = uri.strip
+	puts "#{__method__}(#{uri})"
 
 	data = load_page(uri: uri)
-	
-	content_type = data[:headers].fetch('content-type',[nil]).first.to_s
-	
-	f_name = uri.match(/\/([^\/]+)\.([a-z]+)$/)[1]
-	f_ext = content_type.match(/\/([a-z]+)$/)[1]
-		puts "f_name: #{f_name}"
-		puts "f_ext: #{f_ext}"
-	file_name = "#{f_name}.#{f_ext}"
 
-	case content_type.strip.downcase
-	when /^image\//
-		return {
-			type: :image,
-			format: f_ext,
-			file_name: file_name,
-			data: data[:page],
-		}
-	else
-		return {
-			type: :text,
-			format: :html,
-			file_name: file_name,
-			data: recode_page(data[:page], data[:headers]),
-		}
-	end
+	return recode_page(
+		data[:data],
+		data[:headers],
+	)
 end
+
+def get_image(uri)
+	puts "#{__method__}(#{uri})"
+
+	data = load_page(uri: uri)
+
+	#~ return {
+		#~ data: data[:data],
+		#~ extension: 'jpg',
+	#~ }
+end
+
 
 case ARGV.count
 when 1
@@ -120,12 +114,8 @@ else
 	exit 1
 end
 
-data = get_page(uri)
-page = data[:data]
+#page = get_page(uri)
+#File.write('page.html',page)
 
-puts "page.class: #{page.class}"
-puts "page.lines.count: #{page.lines.count}"
-puts "page.size: #{page.size}"
-puts "page.bytes.count: #{page.bytes.count}"
-
-File.write(data[:file_name],data[:data])
+#~ image = get_image(uri)
+#~ File.write("image.#{image[:extension]}", image[:data])
