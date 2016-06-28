@@ -82,12 +82,24 @@ class Book
 	end
 
 
-	def add_source(src)
-		src.strip!
+	def add_source(*arg)
+	
+		case arg.count
+		when 1
+			parent_id = 0
+			src = arg.first
+		when 2
+			parent_id = arg.first
+			src = arg.last
+		else
+			raise "неверное число аргументов"
+		end
+		
+		src = src.strip
 	
 		@@db.execute(
 			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
-			0,
+			parent_id,
 			src
 		)
 	end
@@ -283,6 +295,10 @@ class Book
 		links.keep_if { |lnk| rule.accept_link?(lnk) }
 		
 			Msg::debug(", оставлено: #{links.count}")
+		
+		links.each { |lnk|
+			add_source(0,lnk)
+		}
 		
 		return links
 	end
