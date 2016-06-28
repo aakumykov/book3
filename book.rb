@@ -3,6 +3,7 @@
 
 require 'sqlite3'
 require 'net/http'
+require 'securerandom'
 
 class Book
 	attr_reader :title, :author, :language
@@ -382,6 +383,12 @@ class Book
 	
 	def save_page(page)
 		Msg::debug("#{self.class}.#{__method__}()")
+		
+		file_name = File.join(@@text_dir, "#{SecureRandom::uuid}.html")
+		
+			Msg::debug(" file_name: #{file_name}")
+		
+		File::write(file_name, page)
 	end
 
 end
