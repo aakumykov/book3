@@ -44,8 +44,15 @@ class Book
 			)"
 		)
 		
+		# каталоги
 		if not Dir.exists?(@@work_dir) then
 			Dir.mkdir(@@work_dir) or raise "невозможно создать каталог #{@@work_dir}"
+		end
+		
+		@@text_dir = File.join(@@work_dir,'text')
+		
+		if not Dir.exists?(@@text_dir) then
+			Dir.mkdir(@@text_dir) or raise "невозможно создать каталог #{@@text_dir}"
 		end
 		
 		@@images_dir = File.join(@@work_dir,'images')
@@ -107,24 +114,18 @@ class Book
 		@page_count += 1
 
 		lnk = get_link
-		
 		rule = get_rule(lnk)
-
 		page = get_page(lnk)
 
 		collect_links(uri: lnk, page: page, rule: rule)
 
 		page = process_page(uri: lnk, page: page, rule: rule)
 		
-		media = load_images(uri: lnk, page: page, rule: rule)
+		images = load_images(uri: lnk, page: page, rule: rule)
+
+		page = fix_page_images(page,images)
 		
-		media.each_pair { |orig_link,full_link|
-			page = page.gsub(orig_link,full_link) if full_link
-		}
-		
-		File.write('page.html', page)
-		
-		save_results(page, media)
+		save_page(page)
 	end
 
 	def prepare_complete?
@@ -284,49 +285,6 @@ class Book
 		return links
 	end
 	
-	def process_page(params)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
-		page = params.fetch(:page,nil) or raise 'отсутствует страница'
-		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
-		
-		processor_name = rule.get_processor(uri)
-		page = rule.send(processor_name, page)
-	end
-	
-	# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
-	# перед загрузкой. Хэш используется для "локализации" html-страницы.
-	def load_images(params)
-		Msg::debug(" #{self.class}.#{__method__}()")
-		
-		links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-		
-		links_hash = {}
-		
-		links.each { |lnk| links_hash[lnk] = nil }
-		
-		links_hash.each_key { |lnk|
-			links_hash[lnk] = repair_uri(params[:uri], lnk)
-		}
-		
-		links_hash.each_pair { |orig_link,full_link|
-			begin
-				image_data = load_page(uri: full_link)
-				image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
-				File.write(image_file,image_data)
-				Msg::debug("загружено изображение (#{full_link}")
-			rescue => e
-				Msg::debug("ошибка загрузки изображения (#{full_link})")
-				image_file = nil
-			end
-			
-			links_hash[orig_link] = image_file
-		}
-		
-		links_hash
-	end
-	
 	def repair_uri(base_uri, uri, opt={debug:false})
 		#Msg::debug("#{self.class}.#{__method__}()")
 		
@@ -367,9 +325,59 @@ class Book
 		return uri
 	end
 	
-	def save_results(page, media)
+	def process_page(params)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
+		page = params.fetch(:page,nil) or raise 'отсутствует страница'
+		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
+		
+		processor_name = rule.get_processor(uri)
+		page = rule.send(processor_name, page)
+	end
+	
+	# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
+	# перед загрузкой. Хэш используется для "локализации" html-страницы.
+	def load_images(params)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
+		
+		links_hash = {}
+		
+		links.each { |lnk| links_hash[lnk] = nil }
+		
+		links_hash.each_key { |lnk|
+			links_hash[lnk] = repair_uri(params[:uri], lnk)
+		}
+		
+		links_hash.each_pair { |k,v| Msg::debug(" #{k} ---> #{v}") }
+		
+		#~ links_hash.each_pair { |orig_link,full_link|
+			#~ begin
+				#~ image_data = load_page(uri: full_link)
+				#~ image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
+				#~ File.write(image_file,image_data)
+				#~ Msg::debug("загружено изображение (#{full_link}")
+			#~ rescue => e
+				#~ Msg::debug("ошибка загрузки изображения (#{full_link})")
+				#~ image_file = nil
+			#~ end
+			#~ 
+			#~ links_hash[orig_link] = image_file
+		#~ }
+		
+		links_hash
+	end
+	
+	def fix_page_images(page, images_hash)
 		Msg::debug("#{self.class}.#{__method__}()")
 	end
+	
+	def save_page(page)
+		Msg::debug("#{self.class}.#{__method__}()")
+	end
+
 end
 
 
