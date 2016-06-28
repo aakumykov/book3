@@ -372,6 +372,12 @@ class Book
 	
 	def fix_page_images(page, images_hash)
 		Msg::debug("#{self.class}.#{__method__}()")
+		
+		images_hash.each_pair { |old_src, new_src|
+			page = page.gsub(old_src, new_src)
+		}
+		
+		return page
 	end
 	
 	def save_page(page)
