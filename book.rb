@@ -40,6 +40,7 @@ class Book
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				parent_id INTEGER,
 				uri TEXT,
+				file_name TEXT,
 				processed BOOLEAN DEFAULT 0,
 				file TEXT
 			)"
