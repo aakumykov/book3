@@ -12,6 +12,7 @@ class Book
 	@@table_name = 'table1'
 	
 	@@rules_dir = './rules'
+	@@work_dir = 'book_tmp'
 
 	def initialize
 		@title = 'Новая книга'
@@ -42,6 +43,16 @@ class Book
 				file TEXT
 			)"
 		)
+		
+		if not Dir.exists?(@@work_dir) then
+			Dir.mkdir(@@work_dir) or raise "невозможно создать каталог #{@@work_dir}"
+		end
+		
+		@@images_dir = File.join(@@work_dir,'images')
+		
+		if not Dir.exists?(@@images_dir) then
+			Dir.mkdir(@@images_dir) or raise "невозможно создать каталог #{@@images_dir}"
+		end
 	end
 
 
@@ -107,6 +118,12 @@ class Book
 		
 		media = load_images(uri: lnk, page: page, rule: rule)
 		
+		media.each_pair { |orig_link,full_link|
+			page = page.gsub(orig_link,full_link) if full_link
+		}
+		
+		File.write('page.html', page)
+		
 		save_results(page, media)
 	end
 
@@ -159,6 +176,17 @@ class Book
 		
 		return page
 	end
+
+	def get_image(uri)
+		Msg::debug("#{__method__}(#{uri})")
+
+		data = load_page(uri: uri)
+
+		#~ return {
+			#~ data: data[:page],
+			#~ extension: 'jpg',
+		#~ }
+	end
 	
 	def load_page(arg)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
@@ -174,30 +202,34 @@ class Book
 
 		Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
 
-		  request = Net::HTTP::Get.new(uri.request_uri)
-		  request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
-		  
-		  response = http.request request
+			request = Net::HTTP::Get.new(uri.request_uri)
+			request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
 
-		  case response
+			response = http.request request
+
+			case response
 			when Net::HTTPRedirection then
 				location = response['location']
-				Msg::debug("перенаправление на '#{location}'")
-				data =  load_page(
-					:uri => location, 
-					:redirects_limit => (redirects_limit-1)
+				puts "перенаправление на '#{location}'"
+				data =  send(
+					__method__,
+					{ :uri => location, :redirects_limit => (redirects_limit-1) }
 				)
 			when Net::HTTPSuccess then
 				data = {
-					:headers => response.to_hash,
 					:page => response.body,
+					:headers => response.to_hash,
 				}
 			else
 				response.value
-		  end
+			end
 		}
+		
+		#puts "========== Headers: =========="
+		#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
+		#puts "=========================="
 	  
-	  return data
+		return data
 	end
 
 	def recode_page(page, headers, target_charset='UTF-8')
@@ -239,8 +271,8 @@ class Book
 		rule = params[:rule]
 		
 		links = repair_uri(
-			base_uri: params[:uri],
-			uri: page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
+			params[:uri],
+			page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
 		)
 		
 			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
@@ -263,41 +295,75 @@ class Book
 		page = rule.send(processor_name, page)
 	end
 	
+	# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
+	# перед загрузкой. Хэш используется для "локализации" html-страницы.
 	def load_images(params)
-		Msg::debug(" #{self.class}.#{__method__}()", nobr: true)
+		Msg::debug(" #{self.class}.#{__method__}()")
 		
-		# Пока это функция-обёртка, параметры не фильтрую
+		links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
 		
-		image_links = repair_uri(
-			base_uri: params[:uri],
-			uri: params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-		)
+		links_hash = {}
+		
+		links.each { |lnk| links_hash[lnk] = nil }
+		
+		links_hash.each_key { |lnk|
+			links_hash[lnk] = repair_uri(params[:uri], lnk)
+		}
+		
+		links_hash.each_pair { |orig_link,full_link|
+			begin
+				image_data = load_page(uri: full_link)
+				image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
+				File.write(image_file,image_data)
+				Msg::debug("загружено изображение (#{full_link}")
+			rescue => e
+				Msg::debug("ошибка загрузки изображения (#{full_link})")
+				image_file = nil
+			end
 			
-			Msg::debug(" -> #{image_links.count} картинок")
+			links_hash[orig_link] = image_file
+		}
 		
-		return image_links
+		links_hash
 	end
 	
-	def repair_uri(params)
+	def repair_uri(base_uri, uri, opt={debug:false})
+		#Msg::debug("#{self.class}.#{__method__}()")
+		
+		in_debug = opt[:debug]
 
-		base_uri = URI(params[:base_uri])
-
-		uri = params[:uri]
+		base_uri = URI(base_uri)
+		
+			Msg::debug("base_uri: #{base_uri}") if in_debug
 		
 		array_mode = uri.is_a?(Array)
 		
+			Msg::debug("array_mode: #{array_mode}") if in_debug
+		
 		uri = [uri] if not array_mode
 		
-		uri.map { |one_uri|
-			one_uri.strip!
-			one_uri.gsub!(/\/+$/,'')
+			Msg::debug("uri: #{uri}") if in_debug
+		
+		uri = uri.map { |one_uri|
+			one_uri = one_uri.strip
+				Msg::debug("one_uri: #{one_uri}") if in_debug
+			one_uri = one_uri.gsub(/\/+$/,'')
+				Msg::debug("one_uri: #{one_uri}") if in_debug
 			one_uri = URI(one_uri)
-			one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
+				Msg::debug("one_uri: #{one_uri}") if in_debug
 			one_uri.host = base_uri.host if one_uri.host.nil?
+				Msg::debug("one_uri: #{one_uri}") if in_debug
+			one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
+				Msg::debug("one_uri: #{one_uri}") if in_debug
 			one_uri.to_s
 		}
 		
+			Msg::debug("uri: #{uri}") if in_debug
+		
 		uri = uri.first if not array_mode
+		
+			Msg::debug("uri: #{uri}") if in_debug
+		
 		return uri
 	end
 	

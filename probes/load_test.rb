@@ -5,7 +5,7 @@ require 'uri'
 require 'net/http'
 
 # 
-def load_data(arg)
+def load_page(arg)
 	puts "#{__method__}()"
 
 	#uri = URI.escape(uri) if not uri.urlencoded?
@@ -35,21 +35,22 @@ def load_data(arg)
 		when Net::HTTPSuccess then
 			data = {
 				:headers => response.to_hash,
-				:page => response.body,
+				:data => response.body,
 			}
 		else
 			response.value
 		end
 	}
+	
+	#puts "========== Headers: =========="
+	#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
+	#puts "=========================="
   
-  return data
+	return data
 end
 
 def recode_page(page, headers, target_charset='UTF-8')
 	puts "#{__method__}()"
-	puts "========== Headers: =========="
-	headers.each_pair { |k,v| puts "#{k}: #{v}" }
-	puts "=========================="
 
 	page_charset = nil
 	headers_charset = nil
@@ -82,24 +83,10 @@ def recode_page(page, headers, target_charset='UTF-8')
 	return page
 end
 
-# def detect_file_name(uri, headers)
-# 	content_type = headers.fetch('content-type',[nil]).first.match(/[a-z]+\/[a-z+]+/i).to_s
-		
-# 		#puts "content_type: #{content_type}"
-	
-# 	f_name = uri.match(/\/([^\/]+)\.([a-z]+)$/)[1]
-# 	f_ext = content_type.match(/\/([a-z]+)$/)[1]
-	
-# 		#puts "f_name: #{f_name}"
-# 		#puts "f_ext: #{f_ext}"
-	
-# 	file_name = "#{f_name}.#{f_ext}"
-# end
-
 def get_page(uri)
 	puts "#{__method__}(#{uri})"
 
-	data = load_data(uri: uri)
+	data = load_page(uri: uri)
 
 	return recode_page(
 		data[:data],
@@ -110,25 +97,12 @@ end
 def get_image(uri)
 	puts "#{__method__}(#{uri})"
 
-	data = load_data(uri)
+	data = load_page(uri: uri)
 
-	content_type = data[:headers].fetch('content-type',[nil]).first.match(/[a-z]+\/[a-z+]+/i).to_s
-	
-		puts "content_type: #{content_type}"
-	
-	f_name = uri.match(/\/([^\/]+)\.([a-z]+)$/)[1]
-	f_ext = content_type.match(/\/([a-z]+)$/)[1]
-	
-		puts "f_name: #{f_name}"
-		puts "f_ext: #{f_ext}"
-	
-	file_name = "#{f_name}.#{f_ext}"
-
-	# MIME type определять самому!
-	return {
-		data: data[:data],
-		type: content_type,
-	}
+	#~ return {
+		#~ data: data[:data],
+		#~ extension: 'jpg',
+	#~ }
 end
 
 
@@ -140,12 +114,8 @@ else
 	exit 1
 end
 
-data = get_page(uri)
+#page = get_page(uri)
+#File.write('page.html',page)
 
-page = data[:data]
-puts "page.class: #{page.class}"
-puts "page.lines.count: #{page.lines.count}"
-puts "page.size: #{page.size}"
-puts "page.bytes.count: #{page.bytes.count}"
-
-File.write(data[:file_name],data[:data])
+#~ image = get_image(uri)
+#~ File.write("image.#{image[:extension]}", image[:data])
