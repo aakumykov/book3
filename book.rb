@@ -108,6 +108,7 @@ class Book
 		Msg::debug("#{self.class}.#{__method__}()")
 
 		until prepare_complete? do
+			puts '------------------------------ страница ------------------------------'
 			process_next_page
 			puts ''
 		end
@@ -127,25 +128,25 @@ class Book
 		
 		@page_count += 1
 
-		lnk = get_link
+		id, lnk = get_link
 		rule = get_rule(lnk)
 		page = get_page(lnk)
 
-		collect_links(uri: lnk, page: page, rule: rule)
+		collect_links(parent_id: id, uri: lnk, page: page, rule: rule)
 
 		page = process_page(uri: lnk, page: page, rule: rule)
 		
 		images = load_images(uri: lnk, page: page, rule: rule)
 
-		page = fix_page_images(page,images)
+		page = fix_page_images(page, images)
 		
 		save_page(page)
 	end
 
 	def prepare_complete?
-		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+		Msg::debug("#{self.class}.#{__method__}", nobr: true)
 
-		Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
+			Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
 
 		return true if @page_count >= @page_limit
 		return true if @error_count >= @error_limit
@@ -155,12 +156,13 @@ class Book
 	def get_link
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
-		res = @@db.execute("SELECT uri FROM #{@@table_name} WHERE processed=0 LIMIT 1")
-		lnk = res.first.first
+		res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE processed=0 LIMIT 1").first
+		id = res.first
+		uri = res.last
 		
-		Msg::debug("-> #{lnk}")
+			Msg::debug("-> id: #{id}, uri: #{uri}")
 		
-		return lnk
+		return [id, uri]
 	end
 	
 	def get_rule(uri)
@@ -282,6 +284,7 @@ class Book
 	def collect_links(params)
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
+		parent_id = params[:parent_id]
 		page = params[:page]
 		rule = params[:rule]
 		
@@ -297,7 +300,7 @@ class Book
 			Msg::debug(", оставлено: #{links.count}")
 		
 		links.each { |lnk|
-			add_source(0,lnk)
+			add_source(parent_id, lnk)
 		}
 		
 		return links
