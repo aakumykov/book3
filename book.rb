@@ -8,6 +8,7 @@ require 'securerandom'
 class Book
 	attr_reader :title, :author, :language
 	attr_accessor :page_limit, :error_limit, :depth_limit
+	attr_accessor :page_count
 
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
@@ -29,6 +30,8 @@ class Book
 		@page_count = 0
 		@error_count = 0
 		@depth = 0
+		
+		@threads_count = 1
 		
 		# настройка БД
 		@@db = SQLite3::Database.new @@db_name
@@ -107,11 +110,20 @@ class Book
 	def prepare
 		Msg::debug("#{self.class}.#{__method__}()")
 
-		until prepare_complete? do
-			puts '------------------------------ страница ------------------------------'
-			process_next_page
-			puts ''
+		threads = []
+		
+		@threads_count.times do
+			threads << Thread.new {
+				processor = Processor.new(self)
+			}
 		end
+		threads.each { |thr| thr.join }
+
+		#~ until prepare_complete? do
+			#~ puts '------------------------------ страница ------------------------------'
+			#~ process_next_link
+			#~ puts ''
+		#~ end
 
 		puts "Подготовка завершена"
 	end
@@ -120,38 +132,6 @@ class Book
 		Msg::debug("#{self.class}.#{__method__}()")
 	end
 
-
-	private
-	
-	def process_next_page
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		@page_count += 1
-
-		id, lnk = get_link
-		rule = get_rule(lnk)
-		page = get_page(lnk)
-
-		collect_links(parent_id: id, uri: lnk, page: page, rule: rule)
-
-		page = process_page(uri: lnk, page: page, rule: rule)
-		
-		images = load_images(uri: lnk, page: page, rule: rule)
-
-		page = fix_page_images(page, images)
-		
-		save_page(page)
-	end
-
-	def prepare_complete?
-		Msg::debug("#{self.class}.#{__method__}", nobr: true)
-
-			Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
-
-		return true if @page_count >= @page_limit
-		return true if @error_count >= @error_limit
-		return true if @depth > @depth_limit
-	end
 
 	def get_link
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
@@ -183,29 +163,83 @@ class Book
 		end
 	end
 
-	def get_page(uri)
-		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
-		
-		data = load_page(uri: uri)
-		page = recode_page(data[:page], data[:headers])
-		
-		Msg::debug "-> #{page.lines.count} строк, #{page.bytes.count} байт"
-		
-		return page
-	end
 
-	def get_image(uri)
-		Msg::debug("#{__method__}(#{uri})")
+	private
+	
+	class Processor
+		
+		def initialize(book)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			@book = book
+			
+			@id, @uri = @book.get_link
+			
+			@rule = @book.get_rule(@uri)
+		end
+		
+		def work
+			@book.page_count += 1
+			
+			page = get_page(@uri)
+		
+			#collect_links(page)
+		end
+		
+		def prepare_complete?
+			Msg::debug("#{self.class}.#{__method__}", nobr: true)
 
-		data = load_page(uri: uri)
+				Msg::debug(", pages: #{@book.page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
 
-		#~ return {
+			return true if @book.page_count >= @book.page_limit
+			return true if @book.error_count >= @book.error_limit
+			return true if @book.depth > @book.depth_limit
+		end
+		
+		def collect_links(page)
+			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+			
+			links = repair_uri(
+				params[:uri],
+				page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
+			)
+			
+				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
+			
+			links.keep_if { |lnk| @rule.accept_link?(lnk) }
+			
+				Msg::debug(", оставлено: #{links.count}")
+			
+			links.each { |lnk|
+				add_source(@current_id, lnk)
+			}
+			
+			return links
+		end
+		
+		def get_page(uri)
+			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+			
+			data = load_page(uri: uri)
+			page = recode_page(data[:page], data[:headers])
+			
+			Msg::debug "-> #{page.lines.count} строк, #{page.bytes.count} байт"
+			
+			return page
+		end
+	
+		def get_image(uri)
+			Msg::debug("#{__method__}(#{uri})")
+
+			data = load_page(uri: uri)
+
+			#~ return {
 			#~ data: data[:page],
 			#~ extension: 'jpg',
-		#~ }
-	end
-	
-	def load_page(arg)
+			#~ }
+		end
+		
+		def load_page(arg)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
 		#uri = URI.escape(uri) if not uri.urlencoded?
@@ -249,168 +283,143 @@ class Book
 		return data
 	end
 
-	def recode_page(page, headers, target_charset='UTF-8')
-		page_charset = nil
-		headers_charset = nil
+		def recode_page(page, headers, target_charset='UTF-8')
+			page_charset = nil
+			headers_charset = nil
+			
+			pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
+
+			page_charset = page.match(pattern)
+			page_charset = page_charset[:charset] if not page_charset.nil?
+			
+			headers.each_pair { |k,v|
+				if 'content-type'==k.downcase.strip then
+					res = v.first.downcase.strip.match(pattern)
+					headers_charset = res[:charset].upcase if not res.nil?
+				end
+			}
+			
+			page_charset = headers_charset if page_charset.nil?
+			page_charset = 'ISO-8859-1' if headers_charset.nil?
+
+			#puts "page_charset: #{page_charset}"
+
+			page = page.encode(
+				target_charset, 
+				page_charset, 
+				{ :replace => '_', :invalid => :replace, :undef => :replace }
+			)
+
+			page = page.gsub(pattern, "charset=UTF-8")
+
+			return page
+		end
 		
-		pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
+		def repair_uri(base_uri, uri, opt={debug:false})
+			#Msg::debug("#{self.class}.#{__method__}()")
+			
+			in_debug = opt[:debug]
 
-		page_charset = page.match(pattern)
-		page_charset = page_charset[:charset] if not page_charset.nil?
+			base_uri = URI(base_uri)
+			
+				Msg::debug("base_uri: #{base_uri}") if in_debug
+			
+			array_mode = uri.is_a?(Array)
+			
+				Msg::debug("array_mode: #{array_mode}") if in_debug
+			
+			uri = [uri] if not array_mode
+			
+				Msg::debug("uri: #{uri}") if in_debug
+			
+			uri = uri.map { |one_uri|
+				one_uri = one_uri.strip
+					Msg::debug("one_uri: #{one_uri}") if in_debug
+				one_uri = one_uri.gsub(/\/+$/,'')
+					Msg::debug("one_uri: #{one_uri}") if in_debug
+				one_uri = URI(one_uri)
+					Msg::debug("one_uri: #{one_uri}") if in_debug
+				one_uri.host = base_uri.host if one_uri.host.nil?
+					Msg::debug("one_uri: #{one_uri}") if in_debug
+				one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
+					Msg::debug("one_uri: #{one_uri}") if in_debug
+				one_uri.to_s
+			}
+			
+				Msg::debug("uri: #{uri}") if in_debug
+			
+			uri = uri.first if not array_mode
+			
+				Msg::debug("uri: #{uri}") if in_debug
+			
+			return uri
+		end
 		
-		headers.each_pair { |k,v|
-			if 'content-type'==k.downcase.strip then
-				res = v.first.downcase.strip.match(pattern)
-				headers_charset = res[:charset].upcase if not res.nil?
-			end
-	    }
-	    
-	    page_charset = headers_charset if page_charset.nil?
-	    page_charset = 'ISO-8859-1' if headers_charset.nil?
+		def process_page(params)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
+			page = params.fetch(:page,nil) or raise 'отсутствует страница'
+			rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
+			
+			processor_name = rule.get_processor(uri)
+			page = rule.send(processor_name, page)
+		end
+		
+		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
+		# перед загрузкой. Хэш используется для "локализации" html-страницы.
+		def load_images(params)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
+			
+			links_hash = {}
+			
+			links.each { |lnk| links_hash[lnk] = nil }
+			
+			links_hash.each_key { |lnk|
+				links_hash[lnk] = repair_uri(params[:uri], lnk)
+			}
+			
+			links_hash.each_pair { |k,v| Msg::debug(" #{k} ---> #{v}") }
+			
+			#~ links_hash.each_pair { |orig_link,full_link|
+				#~ begin
+					#~ image_data = load_page(uri: full_link)
+					#~ image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
+					#~ File.write(image_file,image_data)
+					#~ Msg::debug("загружено изображение (#{full_link}")
+				#~ rescue => e
+					#~ Msg::debug("ошибка загрузки изображения (#{full_link})")
+					#~ image_file = nil
+				#~ end
+				#~ 
+				#~ links_hash[orig_link] = image_file
+			#~ }
+			
+			links_hash
+		end
+		
+		def fix_page_images(page, images_hash)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			images_hash.each_pair { |old_src, new_src|
+				page = page.gsub(old_src, new_src)
+			}
+			
+			return page
+		end
 
-	    #puts "page_charset: #{page_charset}"
-
-	    page = page.encode(
-			target_charset, 
-			page_charset, 
-			{ :replace => '_', :invalid => :replace, :undef => :replace }
-		)
-
-		page = page.gsub(pattern, "charset=UTF-8")
-
-		return page
+		def save_page(page)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			file_name = File.join(@@text_dir, "#{SecureRandom::uuid}.html")
+			
+				Msg::debug(" file_name: #{file_name}")
+			
+			File::write(file_name, page)
+		end
 	end
-
-	def collect_links(params)
-		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
-		
-		parent_id = params[:parent_id]
-		page = params[:page]
-		rule = params[:rule]
-		
-		links = repair_uri(
-			params[:uri],
-			page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
-		)
-		
-			Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
-		
-		links.keep_if { |lnk| rule.accept_link?(lnk) }
-		
-			Msg::debug(", оставлено: #{links.count}")
-		
-		links.each { |lnk|
-			add_source(parent_id, lnk)
-		}
-		
-		return links
-	end
-	
-	def repair_uri(base_uri, uri, opt={debug:false})
-		#Msg::debug("#{self.class}.#{__method__}()")
-		
-		in_debug = opt[:debug]
-
-		base_uri = URI(base_uri)
-		
-			Msg::debug("base_uri: #{base_uri}") if in_debug
-		
-		array_mode = uri.is_a?(Array)
-		
-			Msg::debug("array_mode: #{array_mode}") if in_debug
-		
-		uri = [uri] if not array_mode
-		
-			Msg::debug("uri: #{uri}") if in_debug
-		
-		uri = uri.map { |one_uri|
-			one_uri = one_uri.strip
-				Msg::debug("one_uri: #{one_uri}") if in_debug
-			one_uri = one_uri.gsub(/\/+$/,'')
-				Msg::debug("one_uri: #{one_uri}") if in_debug
-			one_uri = URI(one_uri)
-				Msg::debug("one_uri: #{one_uri}") if in_debug
-			one_uri.host = base_uri.host if one_uri.host.nil?
-				Msg::debug("one_uri: #{one_uri}") if in_debug
-			one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
-				Msg::debug("one_uri: #{one_uri}") if in_debug
-			one_uri.to_s
-		}
-		
-			Msg::debug("uri: #{uri}") if in_debug
-		
-		uri = uri.first if not array_mode
-		
-			Msg::debug("uri: #{uri}") if in_debug
-		
-		return uri
-	end
-	
-	def process_page(params)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
-		page = params.fetch(:page,nil) or raise 'отсутствует страница'
-		rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
-		
-		processor_name = rule.get_processor(uri)
-		page = rule.send(processor_name, page)
-	end
-	
-	# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
-	# перед загрузкой. Хэш используется для "локализации" html-страницы.
-	def load_images(params)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-		
-		links_hash = {}
-		
-		links.each { |lnk| links_hash[lnk] = nil }
-		
-		links_hash.each_key { |lnk|
-			links_hash[lnk] = repair_uri(params[:uri], lnk)
-		}
-		
-		links_hash.each_pair { |k,v| Msg::debug(" #{k} ---> #{v}") }
-		
-		#~ links_hash.each_pair { |orig_link,full_link|
-			#~ begin
-				#~ image_data = load_page(uri: full_link)
-				#~ image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
-				#~ File.write(image_file,image_data)
-				#~ Msg::debug("загружено изображение (#{full_link}")
-			#~ rescue => e
-				#~ Msg::debug("ошибка загрузки изображения (#{full_link})")
-				#~ image_file = nil
-			#~ end
-			#~ 
-			#~ links_hash[orig_link] = image_file
-		#~ }
-		
-		links_hash
-	end
-	
-	def fix_page_images(page, images_hash)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		images_hash.each_pair { |old_src, new_src|
-			page = page.gsub(old_src, new_src)
-		}
-		
-		return page
-	end
-	
-	def save_page(page)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		file_name = File.join(@@text_dir, "#{SecureRandom::uuid}.html")
-		
-			Msg::debug(" file_name: #{file_name}")
-		
-		File::write(file_name, page)
-	end
-
 end
 
 
