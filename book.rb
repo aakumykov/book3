@@ -17,6 +17,8 @@ class Book
 	@@work_dir = 'book_tmp'
 
 	def initialize
+		Msg::debug("#{self.class}.#{__method__}()")
+	
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
 		@language = 'ru'
@@ -31,7 +33,7 @@ class Book
 		@error_count = 0
 		@depth = 0
 		
-		@threads_count = 1
+		@threads_count = 3
 		
 		# настройка БД
 		@@db = SQLite3::Database.new @@db_name
@@ -44,7 +46,7 @@ class Book
 				parent_id INTEGER,
 				uri TEXT,
 				file_name TEXT,
-				processed BOOLEAN DEFAULT 0,
+				status VATCHAR(20) DEFAULT 'new',
 				file TEXT
 			)"
 		)
@@ -119,12 +121,6 @@ class Book
 		end
 		threads.each { |thr| thr.join }
 
-		#~ until prepare_complete? do
-			#~ puts '------------------------------ страница ------------------------------'
-			#~ process_next_link
-			#~ puts ''
-		#~ end
-
 		puts "Подготовка завершена"
 	end
 
@@ -133,14 +129,19 @@ class Book
 	end
 
 
-	def get_link
+	def get_next_link
 		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 		
-		res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE processed=0 LIMIT 1").first
+		res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT 1").first
+		
+		return [nil,nil] if res.nil?
+		
 		id = res.first
 		uri = res.last
 		
 			Msg::debug("-> id: #{id}, uri: #{uri}")
+		
+		@@db.execute "UPDATE #{@@table_name} SET status='in_work' WHERE id='#{id}' "
 		
 		return [id, uri]
 	end
@@ -173,15 +174,15 @@ class Book
 			
 			@book = book
 			
-			@id, @uri = @book.get_link
+			@current_id, @current_uri = @book.get_next_link
 			
-			@rule = @book.get_rule(@uri)
+			#@rule = @book.get_rule(@current_uri)
 		end
 		
 		def work
 			@book.page_count += 1
 			
-			page = get_page(@uri)
+			page = get_page(@current_uri)
 		
 			#collect_links(page)
 		end
@@ -451,6 +452,7 @@ book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
 book.add_source 'http://geektimes.ru'
+#book.add_source 'http://linux.org.ru'
 
 book.page_limit = 1
 
