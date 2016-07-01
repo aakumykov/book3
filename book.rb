@@ -15,6 +15,8 @@ class Book
 	
 	@@rules_dir = './rules'
 	@@work_dir = 'book_tmp'
+	
+	@@threads_count = 3
 
 	def initialize
 		Msg::debug("#{self.class}.#{__method__}()")
@@ -86,6 +88,11 @@ class Book
 		@language = a_language
 	end
 
+
+	def threads=(n)
+		@@threads_count = n if n.to_i.to_s==n.to_s
+	end
+	
 
 	def add_source(*arg)
 	
@@ -455,6 +462,8 @@ book.add_source 'http://geektimes.ru'
 #book.add_source 'http://linux.org.ru'
 
 book.page_limit = 1
+
+book.threads = 3
 
 book.prepare
 book.save
