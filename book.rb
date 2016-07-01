@@ -263,7 +263,15 @@ class Book
 			links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
 			#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map &:first
 			
-			links = links.map { |lnk| repair_uri(lnk) }
+			links = links.map { |lnk| 
+				begin
+					repair_uri(lnk) 
+				rescue => e
+					Msg::warning("кривая ссылка: #{lnk}")
+				end
+			}
+			
+			links.compact!
 			
 				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 			
@@ -457,6 +465,10 @@ class Msg
 	
 	def self.info(msg)
 		puts msg
+	end
+	
+	def self.warning(msg)
+		STDERR.puts "ВНИМАНИЕ: #{msg}"
 	end
 	
 	def self.error(msg)
