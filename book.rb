@@ -136,7 +136,7 @@ class Book
 			threads.each { |thr| 
 				id = thr.value
 				@@db.execute("UPDATE #{@@table_name} SET status='processed' WHERE id='#{id}'")
-					Msg::debug("обработана ссылка: #{id}")
+					#Msg::debug("обработана ссылка: #{id}")
 				@page_count += 1
 			}
 		end
@@ -211,7 +211,8 @@ class Book
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new
 		else
-			return rule = nil
+			require "./#{@@rules_dir}/default.rb"
+			rule = Object.const_get(:Default).new
 		end
 	end
 
@@ -242,6 +243,17 @@ class Book
 			return @current_id
 		end
 		
+		def get_page(uri)
+			Msg::debug("#{self.class}.#{__method__}(#{uri})")
+			
+			data = load_page(uri: uri)
+			page = recode_page(data[:page], data[:headers])
+			
+				Msg::debug " (#{uri}, #{page.lines.count} строк, #{page.bytes.count} байт)"
+			
+			return page
+		end
+	
 		def collect_links(page)
 			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 			
@@ -263,16 +275,6 @@ class Book
 			return links
 		end
 		
-		def get_page(uri)
-			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
-			
-			data = load_page(uri: uri)
-			page = recode_page(data[:page], data[:headers])
-			
-			Msg::debug "-> #{page.lines.count} строк, #{page.bytes.count} байт"
-			
-			return page
-		end
 	
 		def get_image(uri)
 			Msg::debug("#{__method__}(#{uri})")
@@ -286,48 +288,48 @@ class Book
 		end
 		
 		def load_page(arg)
-		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
-		#uri = URI.escape(uri) if not uri.urlencoded?
-		
-		uri = URI(arg[:uri])
-		redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
-		
-		raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
+			#uri = URI.escape(uri) if not uri.urlencoded?
+			
+			uri = URI(arg[:uri])
+			redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
+			
+			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
 
-		data = {}
+			data = {}
 
-		Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
+			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
 
-			request = Net::HTTP::Get.new(uri.request_uri)
-			request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
+				request = Net::HTTP::Get.new(uri.request_uri)
+				request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
 
-			response = http.request request
+				response = http.request request
 
-			case response
-			when Net::HTTPRedirection then
-				location = response['location']
-				puts "перенаправление на '#{location}'"
-				data =  send(
-					__method__,
-					{ :uri => location, :redirects_limit => (redirects_limit-1) }
-				)
-			when Net::HTTPSuccess then
-				data = {
-					:page => response.body,
-					:headers => response.to_hash,
-				}
-			else
-				response.value
-			end
-		}
-		
-		#puts "========== Headers: =========="
-		#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
-		#puts "=========================="
-	  
-		return data
-	end
+				case response
+				when Net::HTTPRedirection then
+					location = response['location']
+					puts "перенаправление на '#{location}'"
+					data =  send(
+						__method__,
+						{ :uri => location, :redirects_limit => (redirects_limit-1) }
+					)
+				when Net::HTTPSuccess then
+					data = {
+						:page => response.body,
+						:headers => response.to_hash,
+					}
+				else
+					response.value
+				end
+			}
+			
+			#puts "========== Headers: =========="
+			#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
+			#puts "=========================="
+		  
+			return data
+		end
 
 		def recode_page(page, headers, target_charset='UTF-8')
 			page_charset = nil
@@ -497,7 +499,7 @@ book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
-#book.add_source 'http://ru.wikipedia.org/wiki/Linux'
+book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
 book.page_limit = 5
 
