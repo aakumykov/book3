@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 #coding: UTF-8
+system 'clear'
 
 require 'sqlite3'
 require 'net/http'
@@ -126,6 +127,7 @@ class Book
 				processor = Processor.new(self)
 			}
 		end
+		
 		threads.each { |thr| thr.join }
 
 		puts "Подготовка завершена"
