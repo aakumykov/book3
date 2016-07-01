@@ -14,8 +14,8 @@ class Book
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
 	
-	@@rules_dir = './rules'
-	@@work_dir = 'book_tmp'
+	@@rules_dir = 'rules'
+	@@work_dir = 'tmp'
 	
 	@@threads_count = 3
 
@@ -197,7 +197,7 @@ class Book
 		
 		case host
 		when 'opennet.ru'
-			require "#{@@rules_dir}/#{file_name}"
+			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new
 		else
 			return rule = nil
