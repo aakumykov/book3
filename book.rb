@@ -226,12 +226,13 @@ class Book
 			@book = book
 			@current_id = id
 			@current_uri = uri
-			
-			#@rule = @book.get_rule(@current_uri)
+			@rule = @book.get_rule(@current_uri)
+				Msg::debug(" rule: #{@rule.class}")
 		end
 		
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
+			
 			#page = get_page(@current_uri)
 		
 			#collect_links(page)
@@ -495,8 +496,8 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
-book.add_source 'http://geektimes.ru'
-#book.add_source 'http://linux.org.ru'
+#book.add_source 'http://geektimes.ru'
+#book.add_source 'http://ru.wikipedia.org/wiki/Linux'
 
 book.page_limit = 5
 
