@@ -120,25 +120,43 @@ class Book
 	def prepare
 		Msg::debug("#{self.class}.#{__method__}()")
 
-		#until prepare_complete? do
+		until prepare_complete? do
 
-			links = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
+			threads = []
+			
+			links = get_fresh_links
 			
 			links.each do |row|
 				id, uri = row
-				
+				threads << Thread.new {
+					Processor.new(self, id, uri).work
+				}
 			end
-
-			#~ threads = []
-			#~ @threads_count.times do
-				#~ threads << Thread.new {
-					#~ processor = Processor.new(self)
-				#~ }
-			#~ end
-			#~ threads.each { |thr| thr.join }
-		#end
+			
+			threads.each { |thr| 
+				id = thr.value
+				@@db.execute("UPDATE #{@@table_name} SET status='processed' WHERE id='#{id}'")
+					Msg::debug("обработана ссылка: #{id}")
+				@page_count += 1
+			}
+		end
 		
 		puts "Подготовка завершена"
+	end
+
+	def prepare_complete?
+		Msg::debug("#{self.class}.#{__method__}", nobr: true)
+
+			Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
+
+		if 0==get_fresh_links.count then
+			Msg::info "закончились ссылки"
+			return true
+		end
+		
+		return true if @page_count >= @page_limit
+		return true if @error_count >= @error_limit
+		return true if @depth > @depth_limit
 	end
 
 	def save
@@ -146,21 +164,26 @@ class Book
 	end
 
 
-	def get_next_link
-		Msg::debug("#{self.class}.#{__method__}()", nobr: true)
-		
-		res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT 1").first
-		
-		return [nil,nil] if res.nil?
-		
-		id = res.first
-		uri = res.last
-		
-			Msg::debug("-> id: #{id}, uri: #{uri}")
-		
-		@@db.execute "UPDATE #{@@table_name} SET status='in_work' WHERE id='#{id}' "
-		
-		return [id, uri]
+	#~ def get_next_link
+		#~ Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+		#~ 
+		#~ res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT 1").first
+		#~ 
+		#~ return [nil,nil] if res.nil?
+		#~ 
+		#~ id = res.first
+		#~ uri = res.last
+		#~ 
+			#~ Msg::debug("-> id: #{id}, uri: #{uri}")
+		#~ 
+		#~ @@db.execute "UPDATE #{@@table_name} SET status='in_work' WHERE id='#{id}' "
+		#~ 
+		#~ return [id, uri]
+	#~ end
+	
+	def get_fresh_links
+		Msg::debug("#{self.class}.#{__method__}()")
+		@@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
 	end
 	
 	def get_rule(uri)
@@ -186,32 +209,25 @@ class Book
 	
 	class Processor
 		
-		def initialize(book)
-			Msg::debug("#{self.class}.#{__method__}()")
+		def initialize(book, id, uri)
+			Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
 			
 			@book = book
-			
-			@current_id, @current_uri = @book.get_next_link
+			@current_id = id
+			@current_uri = uri
 			
 			#@rule = @book.get_rule(@current_uri)
 		end
 		
 		def work
-			@book.page_count += 1
-			
-			page = get_page(@current_uri)
+			Msg::debug("#{self.class}.#{__method__}()")
+			#page = get_page(@current_uri)
 		
 			#collect_links(page)
-		end
-		
-		def prepare_complete?
-			Msg::debug("#{self.class}.#{__method__}", nobr: true)
-
-				Msg::debug(", pages: #{@book.page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
-
-			return true if @book.page_count >= @book.page_limit
-			return true if @book.error_count >= @book.error_limit
-			return true if @book.depth > @book.depth_limit
+			
+			#process_page(page)
+			
+			return @current_id
 		end
 		
 		def collect_links(page)
@@ -471,7 +487,7 @@ book.add_source 'http://opennet.ru'
 book.add_source 'http://geektimes.ru'
 #book.add_source 'http://linux.org.ru'
 
-book.page_limit = 1
+book.page_limit = 5
 
 book.threads = 3
 
