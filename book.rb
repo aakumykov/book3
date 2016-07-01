@@ -225,22 +225,24 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
 			
 			@book = book
-			@current_id = id
-			@current_uri = uri
-			@rule = @book.get_rule(@current_uri)
+			
+			@id = id
+			@uri = URI(uri)
+			@rule = @book.get_rule(@uri)
+
 				Msg::debug(" rule: #{@rule.class}")
 		end
 		
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			#page = get_page(@current_uri)
+			page = get_page(@uri)
 		
-			#collect_links(page)
+			collect_links(page)
 			
 			#process_page(page)
 			
-			return @current_id
+			return @id
 		end
 		
 		def get_page(uri)
@@ -257,10 +259,10 @@ class Book
 		def collect_links(page)
 			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 			
-			links = repair_uri(
-				params[:uri],
-				page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
-			)
+			links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
+			#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map &:first
+			
+			links.map { |lnk| repair_uri(lnk) }
 			
 				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 			
@@ -268,9 +270,7 @@ class Book
 			
 				Msg::debug(", оставлено: #{links.count}")
 			
-			links.each { |lnk|
-				add_source(@current_id, lnk)
-			}
+			links.each { |lnk| @book.add_source(@id, lnk) }
 			
 			return links
 		end
@@ -363,44 +363,16 @@ class Book
 			return page
 		end
 		
-		def repair_uri(base_uri, uri, opt={debug:false})
+		def repair_uri(uri)
 			#Msg::debug("#{self.class}.#{__method__}()")
 			
-			in_debug = opt[:debug]
-
-			base_uri = URI(base_uri)
+			uri = uri.strip
+			uri = uri.gsub(/\/+$/,'')
+			uri = URI(uri)
+			uri.host = @uri.host if uri.host.nil?
+			uri.scheme = @uri.scheme if uri.scheme.nil?
 			
-				Msg::debug("base_uri: #{base_uri}") if in_debug
-			
-			array_mode = uri.is_a?(Array)
-			
-				Msg::debug("array_mode: #{array_mode}") if in_debug
-			
-			uri = [uri] if not array_mode
-			
-				Msg::debug("uri: #{uri}") if in_debug
-			
-			uri = uri.map { |one_uri|
-				one_uri = one_uri.strip
-					Msg::debug("one_uri: #{one_uri}") if in_debug
-				one_uri = one_uri.gsub(/\/+$/,'')
-					Msg::debug("one_uri: #{one_uri}") if in_debug
-				one_uri = URI(one_uri)
-					Msg::debug("one_uri: #{one_uri}") if in_debug
-				one_uri.host = base_uri.host if one_uri.host.nil?
-					Msg::debug("one_uri: #{one_uri}") if in_debug
-				one_uri.scheme = base_uri.scheme if one_uri.scheme.nil?
-					Msg::debug("one_uri: #{one_uri}") if in_debug
-				one_uri.to_s
-			}
-			
-				Msg::debug("uri: #{uri}") if in_debug
-			
-			uri = uri.first if not array_mode
-			
-				Msg::debug("uri: #{uri}") if in_debug
-			
-			return uri
+			return uri.to_s
 		end
 		
 		def process_page(params)
@@ -499,9 +471,9 @@ book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 5
+book.page_limit = 2
 
 book.threads = 3
 
