@@ -154,9 +154,20 @@ class Book
 			return true
 		end
 		
-		return true if @page_count >= @page_limit
-		return true if @error_count >= @error_limit
-		return true if @depth > @depth_limit
+		if @page_count >= @page_limit then
+			Msg::info "все страницы (#{@page_count} шт) обработаны"
+			return true
+		end
+		
+		if @error_count >= @error_limit then
+			Msg::info "достигнут предел количества ошибок (#{@error_count})"
+			return true
+		end
+		
+		if @depth > @depth_limit then
+			Msg::info "достигнут предел глубины (#{@depth}))'"
+			return true
+		end
 	end
 
 	def save
