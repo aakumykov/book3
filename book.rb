@@ -96,7 +96,7 @@ class Book
 	
 
 	def add_source(*arg)
-		Msg::debug("#{self.class}.#{__method__}(#{arg})")
+		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
 	
 		case arg.count
 		when 1
@@ -366,7 +366,7 @@ class Book
 		end
 		
 		def repair_uri(uri)
-			#Msg::debug("#{self.class}.#{__method__}()")
+			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 			
 			uri = uri.strip
 			uri = uri.gsub(/\/+$/,'')
@@ -475,7 +475,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 1
+book.page_limit = 10
 
 book.threads = 1
 
