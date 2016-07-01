@@ -120,16 +120,24 @@ class Book
 	def prepare
 		Msg::debug("#{self.class}.#{__method__}()")
 
-		threads = []
-		
-		@threads_count.times do
-			threads << Thread.new {
-				processor = Processor.new(self)
-			}
-		end
-		
-		threads.each { |thr| thr.join }
+		#until prepare_complete? do
 
+			links = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
+			
+			links.each do |row|
+				id, uri = row
+				
+			end
+
+			#~ threads = []
+			#~ @threads_count.times do
+				#~ threads << Thread.new {
+					#~ processor = Processor.new(self)
+				#~ }
+			#~ end
+			#~ threads.each { |thr| thr.join }
+		#end
+		
 		puts "Подготовка завершена"
 	end
 
