@@ -96,6 +96,7 @@ class Book
 	
 
 	def add_source(*arg)
+		Msg::debug("#{self.class}.#{__method__}(#{arg})")
 	
 		case arg.count
 		when 1
@@ -262,13 +263,14 @@ class Book
 			links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
 			#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map &:first
 			
-			links.map { |lnk| repair_uri(lnk) }
+			links = links.map { |lnk| repair_uri(lnk) }
 			
 				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
 			
-			links.keep_if { |lnk| @rule.accept_link?(lnk) }
+			links = links.keep_if { |lnk| @rule.accept_link?(lnk) }
 			
 				Msg::debug(", оставлено: #{links.count}")
+				#links.each { |l| Msg::debug(l) }
 			
 			links.each { |lnk| @book.add_source(@id, lnk) }
 			
@@ -473,9 +475,9 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 1
 
-book.threads = 3
+book.threads = 1
 
 book.prepare
 book.save
