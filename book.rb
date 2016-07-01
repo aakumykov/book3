@@ -465,6 +465,14 @@ class Msg
 end
 
 
+class String
+	def urlencoded?
+		return true if self.match(/[%0-9ABCDEF]{3,}/i)
+		return false
+	end
+end
+
+
 book = Book.new
 
 book.title = 'Пробная книга'
