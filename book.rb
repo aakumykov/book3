@@ -4,7 +4,7 @@ system 'clear'
 
 require 'sqlite3'
 require 'net/http'
-require 'securerandom'
+require 'nokogiri'
 
 class Book
 	attr_reader :title, :author, :language
@@ -237,9 +237,9 @@ class Book
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			page = get_page(@uri)
+			@page = get_page(@uri)
 		
-			collect_links(page)
+			collect_links
 			
 			#process_page(page)
 			
@@ -254,23 +254,36 @@ class Book
 			
 				Msg::debug " (#{uri}, #{page.lines.count} строк, #{page.bytes.count} байт)"
 			
-			return page
+			page = Nokogiri::HTML(page) { |config|
+				config.nonet
+				config.noerror
+				config.noent
+			}
 		end
 	
-		def collect_links(page)
+		def collect_links
 			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
 			
-			links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map { |lnk| lnk.first }
-			#links = page.scan(/href\s*=\s*['"]([^'"]+)['"]/).map &:first
+			links = @page.search('//a').map { |a| a[:href] }
+			links.compact!
 			
-			links = links.map { |lnk| 
-				begin
-					repair_uri(lnk) 
-				rescue => e
-					Msg::warning("кривая ссылка: #{lnk}")
-				end
+			links.each_with_index { |lnk,index|
+				#puts "#{index}: '#{lnk}'"
 			}
 			
+			links = links.map { |lnk| 
+				repair_uri(lnk)
+				#puts "-"*20
+				#puts "#{lnk}"
+				
+				#~ begin
+					#~ repair_uri(lnk) 
+				#~ rescue => e
+					#~ Msg::warning("кривая ссылка: '#{lnk}'")
+					#~ nil
+				#~ end
+				#puts "-"*20
+			}
 			links.compact!
 			
 				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
@@ -374,15 +387,17 @@ class Book
 		end
 		
 		def repair_uri(uri)
-			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+			#Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
 			uri = uri.strip
+				#Msg::debug("strip: '#{uri}'")
 			uri = uri.gsub(/\/+$/,'')
+				#Msg::debug("gsub: '#{uri}'")
 			uri = URI(uri)
 			uri.host = @uri.host if uri.host.nil?
 			uri.scheme = @uri.scheme if uri.scheme.nil?
 			
-			return uri.to_s
+			uri.to_s
 		end
 		
 		def process_page(params)
@@ -492,10 +507,11 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 10
+book.page_limit = 100
 
 book.threads = 1
 
