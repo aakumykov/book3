@@ -1,0 +1,472 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=koi8-r">
+   <title>OpenNet без "www" - минималистский вариант портала по открытому ПО, Linux, BSD и Unix системам</title>
+   <meta name="KeyWords" content="статьи программы документация unix linux freebsd solaris bsd информация cisco настройка новости утилиты сеть perl программирование описание администрирование русификация faq безопасность sco cgi sgi irix aix юмор">
+   <link rel="icon" type="image/png" href="/favicon.png">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_all.rss" title="Главные + мини-новости">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_6.rss" title="OpenNews RSS: главные новости">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_mini.rss" title="Mini-News RSS: мини-новости">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_review.rss" title="Фильтр: События">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_arts.rss" title="Фильтр: Обзоры статей">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_sec.rss" title="Фильтр: Проблемы безопасности">
+   <link rel="alternate" type="application/rss+xml" href="/opennews/opennews_prog.rss" title="Фильтр: Новые версии программ">
+   <link rel="search" href="http://www.opennet.ru/opensearch.xml" title="OpenNet.ru search" type="application/opensearchdescription+xml">
+   
+   <link rel="stylesheet" href="/opennet_lite.css" type="text/css">
+</head>
+<body bgcolor="#DDE1C2">
+<base href="http://www.opennet.ru/">
+
+<center>
+<table border="0" cellspacing="0" cellpadding="1" bgcolor="#B0B190" width="65%">
+<tr><td>
+<table border="0" cellspacing="0" cellpadding="0" bgcolor="#E9EAD6" width="100%">
+<tr bgcolor="#E9EAD6">
+<td width="249" height="70" valign="BOTTOM" style="background: #E9EAD6 url('/back.gif') repeat-x bottom left">
+    <a href="http://www.opennet.ru"><img src="./opennet2_lite.gif" height="60" width="249" alt="The OpenNET Project / Index page" border="0"></a><br>
+</td>
+<td align="CENTER" style="background: #E9EAD6 url('/back.gif') repeat-x bottom left">
+    <form method="get" action="http://www.opennet.ru/search.shtml">
+    <input type="hidden" name="method" value="and"><input type="hidden" name="format" value="builtin-long"><input type="hidden" name="config" value="htdig"><input type="hidden" name="restrict" value=""><input type="hidden" name="exclude" value=""><a href="./search.shtml">Поиск</a>: <input type="text" size="20" name="words" value="">
+<br><small>[ <a href="/search.shtml">расширенный поиск</a> | <a href="/keywords/">поиск по ключевым словам</a> ]</small>
+</form>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+
+</center>
+<br><br>
+
+<!-- 
+<center>
+<table width="50%"><tr><td>
+<table class=ttxt style="border-top:1px solid #b0b190;">
+<tr><td><center>
+Реклама: 
+</center>    
+</td></tr>
+</table>
+</td></tr>
+</table>
+</center>
+-->
+
+
+
+<table width="90%"><tr>
+<td width="10%"> </td>
+<td>
+<table class="ttxt" style="border-top:1px solid #b0b190;">
+<tr><td>
+
+<table border="0" cellspacing="4" cellpadding="4" width="100%">
+<tr valign="top">
+<td width="50%">
+<table border="0" cellspacing="0" cellpadding="0" width="100%">
+<tr><td><center><b><a href="/opennews/index.shtml">Последние новости</a></b></center></td></tr>
+<tr bgcolor="#B0B190"><td><img src="/p.gif" height="1" width="1" alt=""></td></tr>
+<tr><td>
+<table class="tlist">
+
+<tr><td>
+<b>-</b> <span>01.07</span> <a href="/opennews/art.shtml?num=44713">Релиз web-фреймворка Ruby on Rails 5.0</a> <span class="cnt">(10 +1)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>01.07</span> <a href="/opennews/art.shtml?num=44712">Началось формирование ночных сборок браузерного движка Servo</a> <span class="cnt">(48 +15)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>01.07</span> <a href="/opennews/art.shtml?num=44711">Проект Software Heritage нацелен на создание полного архива открытых исходных текстов</a> <span class="cnt">(29 +15)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44708">Уязвимость удостоверяющего центра StartSSL позволяла получить сертификат для чужого домена</a> <span class="cnt">(40 +18)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44706">Выпуск дистрибутива Linux Mint 18</a> <span class="cnt">(58 +22)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44707">Выпуск пользовательского окружения Enlightenment 0.21</a> <span class="cnt">(49 +12)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44700">В рамках соблюдения закона DMCA в 2015 году из GitHub было удалено более 8 тысяч проектов</a> <span class="cnt">(38 +1)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span style="font-weight: bold">29.06</span> <a href="/opennews/art.shtml?num=44697">Google открыл код SwiftShader, программной реализации OpenGL ES и Direct3D 9</a> <span class="cnt">(22 +14)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44691">Конкурс проектов на базе ОС Tizen (реклама)</a> <span class="cnt">(26 &#8211;18)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44695">В рамках проекта WireGuard подготовлена новая реализация VPN для Linux </a> <span class="cnt">(54 +23)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44686">ОС Qubes переходит на Xfce из-за недовольства развитием KDE</a> <span class="cnt">(211 +64)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>27.06</span> <a href="/opennews/art.shtml?num=44680">Первый стабильный выпуск открытой платформы .NET Core</a> <span class="cnt">(88 &#8211;40)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>27.06</span> <a href="/opennews/art.shtml?num=44674">Выпуск мультимедиа-пакета FFmpeg 3.1</a> <span class="cnt">(34 +28)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>26.06</span> <a href="/opennews/art.shtml?num=44667">Компания Intel открыла компоненты для использования технологии защиты SGX в Linux</a> <span class="cnt">(98 +4)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>25.06</span> <a href="/opennews/art.shtml?num=44669">Уязвимость в ядре Linux, позволяющая выйти из изолированного контейнера</a> <span class="cnt">(36 +19)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>24.06</span> <a href="/opennews/art.shtml?num=44658">Релиз гипервизора Xen 4.7.0 </a> <span class="cnt">(31 +13)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>24.06</span> <a href="/opennews/art.shtml?num=44659">Первый выпуск открытого SSH-сервера Teleport</a> <span class="cnt">(34 +5)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>23.06</span> <a href="/opennews/art.shtml?num=44657">Red Hat поменял лицензию на библиотеку Cygwin</a> <span class="cnt">(40 +10)</span>
+</td></tr>
+
+<tr>
+<td><div style="width: 100%; text-align: right; font-size: 70%;"><a href="/opennews/main.shtml?skip=18&amp;news=open&amp;template=13new2&amp;lines=20&amp;mid_lines=0">далее &gt;&gt;</a></div></td>
+</tr>
+</table> 
+</td></tr>
+</table>
+
+</td>
+<td width="50%">
+<table border="0" cellspacing="0" cellpadding="0" width="100%">
+<tr><td><center><b><a href="/opennews/mini.shtml">Последние мини-новости</a></b></center></td></tr>
+<tr bgcolor="#B0B190"><td><img src="/p.gif" height="1" width="1" alt=""></td></tr>
+<tr><td>
+<table class="tlist">
+<tr><td>
+<b>-</b> <span>01.07</span> <a href="/opennews/art.shtml?num=44710">Первый альфа-выпуск Ubuntu 16.10</a> <span class="cnt">(29 +5)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44705">Релиз движка для создания браузерных 3D-приложений Blend4Web 16.06</a> <span class="cnt">(8 +2)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44702">Сбор вопросов, которые будут заданы в подкасте с сотрудниками Virtuozzo</a> <span class="cnt">(24 +1)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44701">DNS как канал передачи данных от вредоносного ПО</a> <span class="cnt">(39 +15)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>30.06</span> <a href="/opennews/art.shtml?num=44699">Уязвимость в LibreOffice</a> <span class="cnt">(30 +11)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44698">Первый бета-выпуск AMDGPU-PRO, гибридного драйвера на базе модуля AMDGPU </a> <span class="cnt">(20 +22)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44696">Выпуск открытого варианта десктоп-окружения CDE 2.2.4</a> <span class="cnt">(88 +17)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44694">Показательные критические уязвимости в продуктах Symantec и Norton</a> <span class="cnt">(53 +32)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>29.06</span> <a href="/opennews/art.shtml?num=44693">Выпуск VirtualBox 5.0.24</a> <span class="cnt">(20 +13)</span>
+</td></tr>
+<tr><td><div class="tdelim"></div></td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44692">Выпуск легковесного дистрибутива antiX 16</a> <span class="cnt">(22 +9)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44690">Корректирующие выпуски  Python 2.7.12, 3.4.5 и 3.5.2</a> <span class="cnt">(5 +5)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44689">Обновление Firefox 47.0.1</a> <span class="cnt">(10 +3)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44687">Проект по созданию полностью открытого устройства для приема ТВ-каналов</a> <span class="cnt">(56 +33)</span>
+</td></tr>
+<tr><td>
+<b>-</b> <span>28.06</span> <a href="/opennews/art.shtml?num=44683">Утверждён переход DNS-сервера BIND на лицензию MPLv2</a> <span class="cnt">(16 +5)</span>
+</td></tr>
+
+<tr>
+<td><div style="width: 100%; text-align: right; font-size: 70%;"><a href="/opennews/mini.shtml?skip=14&amp;mid_lines=00">далее &gt;&gt;</a></div></td>
+</tr>
+</table> 
+</td></tr>
+</table>
+<br>
+<table border="0" cellspacing="0" cellpadding="0" width="100%">
+<tr><td><center><b><a href="/tips/sml/#last">Последние советы</a></b></center></td></tr>
+<tr bgcolor="#B0B190"><td><img src="/p.gif" height="1" width="1" alt=""></td></tr>
+<tr><td>
+<table class="tlist">
+
+<!--htdig_noindex-->
+
+<tr><td>
+<b>-</b> 12.05 <a href="/tips/2971_linux_kernel_boot_allmodconfig.shtml">Загрузка ядра Linux, собранного в конфигурации allmodconfig</a>
+</td></tr>
+<tr><td>
+<b>-</b> 11.05 <a href="/tips/2969_git_pgp_crypt.shtml">Хранение конфиденциальных данных в Git-репозитории</a>
+</td></tr>
+<tr><td>
+<b>-</b> 07.04 <a href="/tips/2963_ubuntu_windows_bash_wsl.shtml">Включение bash и инструментария Ubuntu в Windows 10</a>
+</td></tr>
+<tr><td>
+<b>-</b> 03.04 <a href="/tips/2962_ubuntu_unity_mir_lxc.shtml">Оценка работы Unity 8 в изолированном контейнере, запускаемом в обычном Ubuntu</a>
+</td></tr>
+<tr><td>
+<b>-</b> 26.03 <a href="/tips/2961_linux_mdadm_raid1_disk_hotspare.shtml">Расширение программного RAID1 в Linux до зеркала из трёх дисков</a>
+</td></tr>
+
+<!--/htdig_noindex-->
+
+
+<tr>
+<td><div style="width: 100%; text-align: right; font-size: 70%;"><a href="/tips/sml/?skip=5#last">далее &gt;&gt;</a></div></td>
+</tr>
+</table>
+
+</td></tr>
+</table>
+
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</td>
+</tr></table>
+<div style="border-top: 0px solid #b0b190; width: 90%; text-align: right; font-size: 70%;">
+<a href="/opennews/opennews_all.rss">RSS</a> | <a href="/add.shtml">Добавить</a> <a href="/announce_news.shtml?c=f">новость</a>/<a href="/announce_tips.shtml?cache=off">заметку</a>
+</div>
+
+
+
+
+
+<br clear="all">
+<br>
+
+<table width="90%"><tr>
+<td width="10%"> </td>
+<td>
+
+<div id="tabs_top">
+<div class="tab-selected" id="tab1" onclick="tabClick(1)">Разделы</div>
+<div class="tab" id="tab2" onclick="tabClick(2)">Важное</div>
+<div class="tab" id="tab3" onclick="tabClick(3)">Форум</div>
+<div class="tab" id="tab4" onclick="tabClick(4)">Новые версии</div>
+<div class="tab" id="tab5" onclick="tabClick(5)">Безопасность</div>
+<div class="tab" id="tab6" onclick="tabClick(6)">События</div>
+<div class="tab" id="tab7" onclick="tabClick(7)">Обзоры</div>
+<div class="tab-null"> </div>
+</div>
+<div id="top_news">
+<table class="ttxt">
+<tr><td>
+
+
+<table width="100%">
+<tr><td colspan="2"> </td></tr>
+<tr align="CENTER">
+<td>
+<form method="get" action="/cgi-bin/opennet/jump.cgi">
+    <select name="to" onchange="submit()" style="font-size: 10pt; width: 250; background-color: #C7CBB1; color: #0000AD;">
+<option value="" selected>Быстрая навигация по сайту</option>
+	<option value="/opennews/">__________________ НОВОСТИ:</option>
+<option value="/opennews/">Новости OpenNews</option>
+<option value="/news/opennet.shtml">Все новости OpenNet в одном месте</option>
+<option value="/lastsoft/">LastSoft - Свежий софт</option>
+<option value="/security/">Сообщения о проблемах безопасности</option>
+<option value="/news/grab.shtml">Новости с других сайтов</option>
+	<option value="/cgi-bin/openforum/vsluhboard.cgi">__________________ ОБЩЕНИЕ:</option>
+<option value="/cgi-bin/openforum/vsluhboard.cgi">Форум</option>
+    <option value="/prog/sml">__________________ КАТАЛОГИ:</option>
+<option value="/prog/sml/">Каталог программного обеспечения</option>
+<option value="/links/sml/">Каталог ссылок на unix ресурсы</option>
+<option value="/filebase.shtml">Каталог тематических статей</option>
+<option value="/docs/">Архив документации</option>
+<option value="/tips/sml/">Советы, заметки</option>
+<option value="/man.shtml">MAN - Системные руководства</option>
+	<option value="/mp/">_______________ МИНИ-ПОРТАЛЫ:</option>
+<option value="/cisco.shtml">CISCO.opennet.ru</option>
+<option value="/bsd.shtml">BSD.opennet.ru</option>
+<option value="/linux.shtml">LINUX.opennet.ru</option>
+<option value="/solaris.shtml">SOLARIS.opennet.ru</option>
+<option value="/web.shtml">WEB.opennet.ru - web-технологии</option>
+<option value="/security/">SECURITY.opennet.ru</option>
+<option value="/palm.shtml">PALM.opennet.ru - карманные ПК</option>
+<option value="/mp/admin/">Администратору</option>
+<option value="/mp/programmer/">Разработчику</option>
+<option value="/mp/user/">Пользователю</option>
+<option value="/mp/">Другие....</option>
+	<option value="">__________________ РАЗНОЕ:</option>
+<option value="/announce_prog.shtml">Добавить новость, ссылку, статью</option>
+<option value="/ipcalc.shtml">IP-калькулятор</option>
+	</select> <input type="submit" value="&gt;" style="background-color: #DDE1C2; color: #0000AD; border: 0;">
+</form>
+</td>
+<td>
+
+<form method="get" action="/cgi-bin/opennet/jump.cgi">
+<select name="to" onchange="submit()" style="font-size: 10pt; width: 250; background-color: #C7CBB1; color: #0000AD;">
+<option value="" selected>Тематическая выборка
+</option>
+<option value="admin">Администратору
+ </option>
+<option value="mail">  |-- Почта
+ </option>
+<option value="dns">  |-- DNS
+ </option>
+<option value="apache">  |-- HTTP-серверы
+ </option>
+<option value="ftp">  |-- FTP, BitTorrent
+ </option>
+<option value="samba">  |-- Samba, Windows
+ </option>
+<option value="auth">  |-- LDAP, Radius, Tacacs
+ </option>
+<option value="proxy">  |-- Proxy, squid, socks
+</option>
+<option value="">
+ </option>
+<option value="route">  |-- Маршрутизация, NAT
+ </option>
+<option value="firewall">  |-- Firewall, Пакетные фильтры
+ </option>
+<option value="voip">  |-- VoIP, Asterisk
+ </option>
+<option value="vpn">  |-- VPN, PPPoE PPTP, IPSec
+ </option>
+<option value="crypt">  |-- Шифрование, SSH, SSL
+</option>
+<option value="">
+ </option>
+<option value="tune">  |-- Оптимизация, тюнинг
+ </option>
+<option value="cluster">  |-- Кластеры
+ </option>
+<option value="virtual">  |-- Виртуализация
+ </option>
+<option value="traffic">  |-- Учет и ограничение трафика
+ </option>
+<option value="monitoring">  |-- Мониторинг, диагностика
+ </option>
+<option value="security">  |-- Безопасность
+</option>
+<option value="">
+ </option>
+<option value="fs">  |-- Файловые системы
+ </option>
+<option value="backup">  |-- Резервное копирование
+ </option>
+<option value="hardware">  |-- Аппаратура, Железо
+ </option>
+<option value="kernel">  |-- Ядро ОС (kernel)
+ </option>
+<option value="quota">  |-- Квоты, ACL, ограничения
+</option>
+<option value="">
+</option>
+<option value="user">Пользователю
+ </option>
+<option value="rus">  |-- Русификация
+ </option>
+<option value="x">  |-- X Window
+ </option>
+<option value="multimedia">  |-- Мультимедиа, звук, видео
+ </option>
+<option value="dialup">  |-- Dial-up, ISP, PPP
+</option>
+<option value="">
+</option>
+<option value="programmer">Программисту
+ </option>
+<option value="web">  |-- Web-технологии
+ </option>
+<option value="shell">  |-- Shell-скрипты
+ </option>
+<option value="perl">  |-- Perl
+ </option>
+<option value="python">  |-- Python
+ </option>
+<option value="gcc">  |-- GCC, Си/Си++
+ </option>
+<option value="php">  |-- PHP
+ </option>
+<option value="java">  |-- Java, JSP
+ </option>
+<option value="javascript">  |-- JavaScript
+ </option>
+<option value="html">  |-- HTML, CSS
+ </option>
+<option value="sql">  |-- MySQL, PostgreSQL, NoSQL
+</option>
+<option value="">
+</option>
+<option value="linux">Linux
+</option>
+<option value="bsd">FreeBSD, OpenBSD, NetBSD
+</option>
+<option value="solaris">Solaris
+</option>
+<option value="cisco">Cisco, маршрутизаторы
+
+</option></select> <input type="submit" value="&gt;" style="background-color: #DDE1C2; color: #0000AD; border: 0;">
+</form>
+
+</td>
+</tr>
+<tr><td colspan="2"> </td></tr>
+<tr align="CENTER">
+<td colspan="2">
+<small><a href="http://www.opennet.ru">Главная страница (c www.)</a>  |  <a href="/news/opennet.shtml">Новости всех разделов</a>  |  <a href="/news/grab.shtml">Новости с других сайтов</a>  |  <a href="/lastsoft/">Последние версии ПО</a> | <a href="/forum/">Форум</a> | <a href="http://twitter.com/opennetru"><img src="/twitter.png" height="16" width="16" alt="twitter" title="Twitter" border="0"></a>  <a href="http://vk.com/opennet"><img src="/img/vkontakte.gif" height="16" width="16" title="ВКонтакте" border="0"></a></small>
+</td>
+</tr>
+</table>
+
+
+</td></tr>
+<tr></tr>
+</table>
+</div>
+</td>
+</tr></table>
+
+
+<!-- td width=240 valign=top -->
+
+
+
+
+
+<br clear="all">
+<br><br>
+
+<table border="0" cellspacing="0" cellpadding="0" width="100%">
+<tr>
+<td align="left" width="40%">
+
+
+
+</td>
+<td align="right" width="60%">
+<small>Created 1996-2016 by <b><a href="/contact.shtml">Maxim Chirkov</a></b>
+[ <a href="/add.shtml">Добавить</a> | <a href="/reklama.shtml">Реклама</a> | <a href="/banners2.shtml">Вебмастеру</a> ]</small>
+<noscript>
+<img src="//top.mail.ru/counter?js=na;id=77689" height="1" width="1" alt="">
+</noscript>
+<img src="//counter.rambler.ru/top100.cnt?10566" width="1" height="1" border="0">
+</td>
+</tr>
+</table>
+</body>
+</html>
