@@ -1,4 +1,4 @@
 *.sqlite*
 *.swp
-book_tmp/
+tmp/
 
