@@ -27,7 +27,7 @@ class OpennetRu
 		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		@current_rule = get_rule(uri)
-			#Msg::debug "@current_rule: #{@current_rule}"
+			Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
 	
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern|
 			pattern.length
@@ -41,6 +41,10 @@ class OpennetRu
 			#Msg::debug "link_name: #{link_name}"
 		
 		@current_rule[:links].include?(link_name.to_sym)
+	end
+
+	def process_page(page)
+		self.send(@current_rule[:processor], page)
 	end
 
 

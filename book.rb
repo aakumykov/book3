@@ -5,11 +5,16 @@ system 'clear'
 require 'sqlite3'
 require 'net/http'
 require 'nokogiri'
+require 'securerandom'
 
 class Book
+	# пользовательское
 	attr_reader :title, :author, :language
 	attr_accessor :page_limit, :error_limit, :depth_limit
+	
+	# внутреннее
 	attr_accessor :page_count
+	attr_reader :text_dir, :images_dir
 
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
@@ -59,16 +64,16 @@ class Book
 			Dir.mkdir(@@work_dir) or raise "невозможно создать каталог #{@@work_dir}"
 		end
 		
-		@@text_dir = File.join(@@work_dir,'text')
+		@text_dir = File.join(@@work_dir,'text')
 		
-		if not Dir.exists?(@@text_dir) then
-			Dir.mkdir(@@text_dir) or raise "невозможно создать каталог #{@@text_dir}"
+		if not Dir.exists?(@text_dir) then
+			Dir.mkdir(@text_dir) or raise "невозможно создать каталог #{@text_dir}"
 		end
 		
-		@@images_dir = File.join(@@work_dir,'images')
+		@images_dir = File.join(@@work_dir,'images')
 		
-		if not Dir.exists?(@@images_dir) then
-			Dir.mkdir(@@images_dir) or raise "невозможно создать каталог #{@@images_dir}"
+		if not Dir.exists?(@images_dir) then
+			Dir.mkdir(@images_dir) or raise "невозможно создать каталог #{@images_dir}"
 		end
 	end
 
@@ -122,6 +127,8 @@ class Book
 		Msg::debug("#{self.class}.#{__method__}()")
 
 		until prepare_complete? do
+			
+			Msg::debug '-'*20
 
 			threads = []
 			
@@ -240,7 +247,9 @@ class Book
 		
 			collect_links
 			
-			#process_page(page)
+			result_page = process_page
+			
+			save_page(result_page)
 			
 			return @id
 		end
@@ -278,7 +287,7 @@ class Book
 			return links
 		end
 		
-	
+
 		def get_image(uri)
 			Msg::debug("#{__method__}(#{uri})")
 
@@ -380,15 +389,11 @@ class Book
 			uri.to_s
 		end
 		
-		def process_page(params)
+		def process_page
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			uri = params.fetch(:uri,nil) or raise 'отсутствует URI'
-			page = params.fetch(:page,nil) or raise 'отсутствует страница'
-			rule = params.fetch(:rule,nil) or raise 'отсутствует правило'
-			
-			processor_name = rule.get_processor(uri)
-			page = rule.send(processor_name, page)
+			page = @rule.process_page(@page)
+				Msg::debug(" page: #{page.class}")
 		end
 		
 		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
@@ -411,7 +416,7 @@ class Book
 			#~ links_hash.each_pair { |orig_link,full_link|
 				#~ begin
 					#~ image_data = load_page(uri: full_link)
-					#~ image_file = File.join(@@images_dir,"#{rand(10000)}.jpg")
+					#~ image_file = File.join(@images_dir,"#{rand(10000)}.jpg")
 					#~ File.write(image_file,image_data)
 					#~ Msg::debug("загружено изображение (#{full_link}")
 				#~ rescue => e
@@ -438,8 +443,7 @@ class Book
 		def save_page(page)
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			file_name = File.join(@@text_dir, "#{SecureRandom::uuid}.html")
-			
+			file_name = File.join(@book.text_dir, "#{SecureRandom::uuid}.html")
 				Msg::debug(" file_name: #{file_name}")
 			
 			File::write(file_name, page)
