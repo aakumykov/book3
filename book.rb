@@ -210,10 +210,10 @@ class Book
 		case host
 		when 'opennet.ru'
 			require "./#{@@rules_dir}/#{file_name}"
-			rule = Object.const_get(class_name).new
+			rule = Object.const_get(class_name).new(uri)
 		else
 			require "./#{@@rules_dir}/default.rb"
-			rule = Object.const_get(:Default).new
+			rule = Object.const_get(:Default).new(uri)
 		end
 	end
 
@@ -229,8 +229,7 @@ class Book
 			
 			@id = id
 			@uri = URI(uri)
-			@rule = @book.get_rule(@uri)
-
+			@rule = @book.get_rule(@uri.to_s)
 				Msg::debug(" rule: #{@rule.class}")
 		end
 		
@@ -252,7 +251,7 @@ class Book
 			data = load_page(uri: uri)
 			page = recode_page(data[:page], data[:headers])
 			
-				Msg::debug " (#{uri}, #{page.lines.count} строк, #{page.bytes.count} байт)"
+				Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
 			
 			page = Nokogiri::HTML(page) { |config|
 				config.nonet
@@ -262,36 +261,17 @@ class Book
 		end
 	
 		def collect_links
-			Msg::debug("#{self.class}.#{__method__}()", nobr: true)
+			Msg::debug("#{self.class}.#{__method__}()")
 			
-			links = @page.search('//a').map { |a| a[:href] }
-			links.compact!
+			links = @page.search('//a').map { |a| a[:href] }.compact
 			
-			links.each_with_index { |lnk,index|
-				#puts "#{index}: '#{lnk}'"
-			}
+			links = links.map { |lnk| repair_uri(lnk) }.compact
 			
-			links = links.map { |lnk| 
-				repair_uri(lnk)
-				#puts "-"*20
-				#puts "#{lnk}"
-				
-				#~ begin
-					#~ repair_uri(lnk) 
-				#~ rescue => e
-					#~ Msg::warning("кривая ссылка: '#{lnk}'")
-					#~ nil
-				#~ end
-				#puts "-"*20
-			}
-			links.compact!
-			
-				Msg::debug(", собрано ссылок: #{links.count}", nobr: true)
+				Msg::debug(" собрано ссылок: #{links.count}")
 			
 			links = links.keep_if { |lnk| @rule.accept_link?(lnk) }
 			
-				Msg::debug(", оставлено: #{links.count}")
-				#links.each { |l| Msg::debug(l) }
+				Msg::debug(" оставлено: #{links.count}")
 			
 			links.each { |lnk| @book.add_source(@id, lnk) }
 			
@@ -511,7 +491,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 100
+book.page_limit = 2
 
 book.threads = 1
 

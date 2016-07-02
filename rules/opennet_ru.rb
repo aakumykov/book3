@@ -1,7 +1,8 @@
 # coding: utf-8
+system 'clear'
 
 class OpennetRu
-	@@link_names = {
+	@@link_aliases = {
 		main_page: '^http://opennet\.ru$',
 		news_article: '/opennews/art\.shtml\?num=[0-9]+$',
 		any_page: '^.+$'
@@ -9,31 +10,68 @@ class OpennetRu
 
 	@@rules = {
 		main_page: {
-			news_article: :NewsArticle,
-			main_page: :MainPage,
+			processor: :MainPage,
+			links: [ :news_article ]
 		},
 		news_article: {
+			processor: :NewsArticle,
+			links: [],
 		},
 		any_page: {
-			any_page: :DefaultPage,
+			processor: :DefaultPage,
+			links: [],
 		},
 	}
 
-	def initialize
-		link_names = @@link_names.sort_by { |name,pattern|
+	def initialize(uri)
+		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		
+		@current_rule = get_rule(uri)
+			#Msg::debug "@current_rule: #{@current_rule}"
+	
+		@@link_aliases = @@link_aliases.sort_by { |name,pattern|
 			pattern.length
 		}.reverse.to_h
-		
-		#puts "#{link_names}"
-		#link_names.each { |k,v| puts "#{k} => #{v}"}
 	end
 
 	def accept_link?(uri)
+		#Msg::debug "#{self.class}.#{__method__}(#{uri}))"
 		
+		link_name = uri2name(uri)
+			#Msg::debug "link_name: #{link_name}"
+		
+		@current_rule[:links].include?(link_name.to_sym)
 	end
 
 
 	private
+
+	# Служебные методы
+	def get_rule(uri)
+		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		
+		link_name = uri2name(uri)
+			#Msg::debug " link_name: #{link_name}"
+		
+		rule = name2rule(link_name)
+			#Msg::debug " rule: #{rule}"
+		
+		return rule
+	end
+	
+	def uri2name(uri)
+		begin
+			@@link_aliases.each_pair { |name,pattern|
+				raise name.to_s if uri.match(pattern)
+			}
+		rescue => e
+			e.message
+		end
+	end
+
+	def name2rule(name)
+		@@rules[name.to_sym]
+	end
 
 	# Страничные методы
 	def DefaultPage(dom)
@@ -50,4 +88,6 @@ class OpennetRu
 end
 
 
-o = OpennetRu.new
+#o = OpennetRu.new('http://opennet.ru')
+#puts o.accept_link?('http://opennet.ru')
+#puts o.accept_link?('http://www.opennet.ru/opennews/art.shtml?num=44713')
