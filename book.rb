@@ -248,7 +248,7 @@ class Book
 			@title = get_title(@page)
 			
 			links = collect_links(@page)
-				Msg::debug links
+				#Msg::debug links
 			
 			result_page = @rule.process_page(@page)
 				#Msg::debug "result_page: #{result_page.lines.count} строк"
@@ -289,7 +289,21 @@ class Book
 			
 			links = dom.search('//a').map { |a| a[:href] }.compact
 			
-			links = links.map { |lnk| repair_uri(lnk) }.compact
+			links = links.map { |lnk| lnk.strip }
+			
+			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
+			
+			links = links.map { |lnk| 
+				#Msg::debug "lnk: #{lnk}"
+				
+				begin
+					repair_uri(lnk)
+				rescue => e
+					Msg::warning "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
+					nil
+				end
+				
+			}.compact
 			
 				Msg::debug(" собрано ссылок: #{links.count}")
 			
