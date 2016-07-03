@@ -19,7 +19,7 @@ class Book
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
 	
-	@@current_rules_dir = 'rules'
+	@@rules_dir = 'rules'
 	@@work_dir = 'tmp'
 	
 	@@threads_count = 3
@@ -182,10 +182,10 @@ class Book
 		
 		case host
 		when 'opennet.ru'
-			require "./#{@@current_rules_dir}/#{file_name}"
+			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		else
-			require "./#{@@current_rules_dir}/default.rb"
+			require "./#{@@rules_dir}/default.rb"
 			rule = Object.const_get(:Default).new(uri)
 		end
 	end
@@ -231,11 +231,16 @@ class Book
 		def initialize(book, id, uri)
 			Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
 			
+			the_uri = URI(uri)
+			
 			@book = book
 			
 			@current_id = id
-			@current_uri = URI(uri)
+			@current_uri = uri
+			@current_host = the_uri.host
+			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
+
 				#Msg::debug(" rule: #{@current_rule.class}")
 		end
 		
@@ -417,15 +422,11 @@ class Book
 		def repair_uri(uri)
 			#Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
-			uri = uri.strip
-				#Msg::debug("strip: '#{uri}'")
-			uri = uri.gsub(/\/+$/,'')
-				#Msg::debug("gsub: '#{uri}'")
-			uri = URI(uri)
-			uri.host = @current_uri.host if uri.host.nil?
-			uri.scheme = @current_uri.scheme if uri.scheme.nil?
+			uri = URI( uri.strip.gsub(/\/+$/,'') )
+			uri.host = @current_host if uri.host.nil?
+			uri.scheme = @current_scheme if uri.scheme.nil?
 			
-			uri.to_s
+			return uri.to_s
 		end
 		
 		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
@@ -492,11 +493,11 @@ class Book
 </html>
 MARKUP
 			
-			file_name = "#{SecureRandom::uuid}.html"
+			file_name = Digest::MD5.hexdigest(@current_uri).to_s + ".html"
 			file = File.join(@book.text_dir, file_name)				
 				#Msg::debug(" file_name: #{file_name}")
 			
-			File::write(file, html)# and Msg::debug "записан файл #{file_name}"
+			File::write(file, html) and Msg::debug "записан файл #{file_name}"
 			
 			@book.link_update(
 				set: {title: @title, file: file_name}, 
