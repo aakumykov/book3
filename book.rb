@@ -240,6 +240,9 @@ class Book
 			@current_host = the_uri.host
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
+			
+			@file_name = Digest::MD5.hexdigest(@current_uri) + '.html'
+			@file_path = File.join(@book.text_dir, @file_name)
 
 				#Msg::debug(" rule: #{@current_rule.class}")
 		end
@@ -255,7 +258,9 @@ class Book
 				#Msg::debug links
 			
 			result_page = @current_rule.process_page(@page)
-				#Msg::debug "result_page: #{result_page.lines.count} строк"
+				#Msg::debug " result_page: #{result_page.lines.count} строк"
+			
+			result_page = make_links_offline(links_hash, result_page)
 			
 			save_page(@title,result_page)
 			
@@ -320,6 +325,17 @@ class Book
 			}
 			
 			return links_hash
+		end
+		
+		def make_links_offline(links_hash, page)
+			Msg::debug("#{__method__}(links: #{links_hash.count}, page: #{page.size} bytes)")
+			
+			#~ links_hash.each_pair { |lnk_orig,lnk_full|
+				#~ lnk_local = Digest::MD5.hexdigest(lnk_full)
+				#~ page.gsub!(lnk_orig, lnk_local)
+			#~ }
+			
+			page
 		end
 		
 
@@ -493,14 +509,10 @@ class Book
 </html>
 MARKUP
 			
-			file_name = Digest::MD5.hexdigest(@current_uri).to_s + ".html"
-			file = File.join(@book.text_dir, file_name)				
-				#Msg::debug(" file_name: #{file_name}")
-			
-			File::write(file, html) and Msg::debug "записан файл #{file_name}"
+			File::write(@file_path, html) and Msg::debug "записан файл #{@file_name}"
 			
 			@book.link_update(
-				set: {title: @title, file: file_name}, 
+				set: {title: @title, file: @file_name}, 
 				where: {id: @current_id}
 			)
 		end
