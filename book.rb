@@ -224,10 +224,10 @@ class Book
 	end
 	
 	def uri2file_path(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		file_path = File.join(@text_dir, Digest::MD5.hexdigest(uri)+'.html')
-			Msg::debug " file_path: #{file_path}"
+			#Msg::debug " file_path: #{file_path}"
 		
 		return file_path
 	end
@@ -339,10 +339,11 @@ class Book
 		def make_links_offline(links_hash, page)
 			Msg::debug("#{__method__}(links: #{links_hash.count}, page: #{page.size} bytes)")
 			
-			#~ links_hash.each_pair { |lnk_orig,lnk_full|
-				#~ lnk_local = @book.uri2file_path(lnk_full)
-				#~ page.gsub!(lnk_orig, lnk_local)
-			#~ }
+			links_hash.each_pair { |lnk_orig,lnk_full|
+				lnk_local = @book.uri2file_path(lnk_full)
+				page.gsub!(lnk_orig, lnk_local)
+					#Msg::debug " #{lnk_orig} --> #{lnk_local}"
+			}
 			
 			page
 		end
@@ -572,7 +573,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 12
 
 book.threads = 1
 
