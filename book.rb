@@ -202,7 +202,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 		
 		condition = params[:where]
 		data = params[:set]
@@ -218,7 +218,7 @@ class Book
 		}.join(', ')
 		
 		sql = "UPDATE #{@@table_name} SET #{data} WHERE #{condition}"
-			#Msg::debug " #{sql}"
+			Msg::debug("#{self.class}.#{__method__}(), #{sql}")
 		
 		@@db.execute(sql)
 	end
@@ -499,7 +499,7 @@ MARKUP
 			File::write(file, html)# and Msg::debug "записан файл #{file_name}"
 			
 			@book.link_update(
-				set: {file: file_name}, 
+				set: {title: @title, file: file_name}, 
 				where: {id: @current_id}
 			)
 		end
