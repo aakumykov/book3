@@ -100,27 +100,9 @@ class Book
 	end
 	
 
-	def add_source(*arg)
+	def add_source(uri)
 		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
-	
-		case arg.count
-		when 1
-			parent_id = 0
-			src = arg.first
-		when 2
-			parent_id = arg.first
-			src = arg.last
-		else
-			raise "неверное число аргументов"
-		end
-		
-		src = src.strip
-	
-		@@db.execute(
-			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
-			parent_id,
-			src
-		)
+		link_add(0,uri)
 	end
 
 	def prepare
@@ -143,8 +125,10 @@ class Book
 			
 			threads.each { |thr| 
 				id = thr.value
-				@@db.execute("UPDATE #{@@table_name} SET status='processed' WHERE id='#{id}'")
-					#Msg::debug("обработана ссылка: #{id}")
+				link_update(
+					set: { status: 'processed' },
+					where: { id: id }
+				)
 				@page_count += 1
 			}
 		end
@@ -187,27 +171,6 @@ class Book
 		@@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
 	end
 
-	# update_link({key:value [,key:value]},{key:value [,key:value]}
-	def update_link(params)
-		Msg::debug("#{self.class}.#{__method__}()")
-		
-		condition = params[:where]
-		data = params[:set]
-		
-		condition = condition.to_a.map { |k,v| 
-			v="'#{v}'" if v.is_a? String
-			"#{k}=#{v}" 
-		}.join(' AND ')
-		
-		data = data.to_a.map { |k,v| 
-			v="'#{v}'" if v.is_a? String
-			"#{k}=#{v}" 
-		}.join(', ')
-		
-		sql = "UPDATE #{@@table_name} SET #{data} WHERE #{condition}"
-			Msg::debug " #{sql}"
-	end
-	
 	def get_rule(uri)
 		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
@@ -227,7 +190,40 @@ class Book
 		end
 	end
 
+	def link_add(parent_id,uri)
+		#Msg::debug("#{self.class}.#{__method__}(#{parent_id}, #{uri})")
+		
+		@@db.execute(
+			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
+			parent_id,
+			uri
+		)
+	end
 
+	# link_update({key:value [,key:value]},{key:value [,key:value]}
+	def link_update(params)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		condition = params[:where]
+		data = params[:set]
+		
+		condition = condition.to_a.map { |k,v| 
+			v="'#{v}'" if v.is_a? String
+			"#{k}=#{v}" 
+		}.join(' AND ')
+		
+		data = data.to_a.map { |k,v| 
+			v="'#{v}'" if v.is_a? String
+			"#{k}=#{v}" 
+		}.join(', ')
+		
+		sql = "UPDATE #{@@table_name} SET #{data} WHERE #{condition}"
+			#Msg::debug " #{sql}"
+		
+		@@db.execute(sql)
+	end
+	
+	
 	private
 	
 	class Processor
@@ -282,8 +278,10 @@ class Book
 		end
 		
 		def get_title(dom)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
 			title = dom.search('//title').text
-				Msg::debug "title: #{title}"
+				#Msg::debug " title: #{title}"
 			return title
 		end
 	
@@ -308,13 +306,13 @@ class Book
 				
 			}.compact
 			
-				Msg::debug(" собрано ссылок: #{links.count}")
+				#Msg::debug(" собрано ссылок: #{links.count}")
 			
 			links = links.keep_if { |lnk| @current_rule.accept_link?(lnk) }
 			
-				Msg::debug(" оставлено: #{links.count}")
+				#Msg::debug(" оставлено: #{links.count}")
 			
-			links.each { |lnk| @book.add_source(@current_id, lnk) }
+			links.each { |lnk| @book.link_add(@current_id, lnk) }
 			
 			return links
 		end
@@ -498,9 +496,9 @@ MARKUP
 			file = File.join(@book.text_dir, file_name)				
 				#Msg::debug(" file_name: #{file_name}")
 			
-			File::write(file, html) and Msg::debug "записан файл #{file_name}"
+			File::write(file, html)# and Msg::debug "записан файл #{file_name}"
 			
-			@book.update_link(
+			@book.link_update(
 				set: {file: file_name}, 
 				where: {id: @current_id}
 			)
@@ -552,7 +550,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 5
 
 book.threads = 1
 
