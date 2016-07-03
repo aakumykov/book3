@@ -246,7 +246,7 @@ class Book
 			
 			@title = get_title(@page)
 			
-			links = collect_links(@page)
+			links_hash = collect_links(@page)
 				#Msg::debug links
 			
 			result_page = @current_rule.process_page(@page)
@@ -289,32 +289,32 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			links = dom.search('//a').map { |a| a[:href] }.compact
-			
 			links = links.map { |lnk| lnk.strip }
-			
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
 			
-			links = links.map { |lnk| 
+			links_hash = links.map { |lnk| 
 				#Msg::debug "lnk: #{lnk}"
-				
 				begin
-					repair_uri(lnk)
+					[lnk, repair_uri(lnk)]
 				rescue => e
 					Msg::warning "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
 				end
-				
-			}.compact
+			}.compact.to_h
 			
-				#Msg::debug(" собрано ссылок: #{links.count}")
+				#Msg::debug(" собрано ссылок: #{links_hash.count}")
 			
-			links = links.keep_if { |lnk| @current_rule.accept_link?(lnk) }
+			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
+				@current_rule.accept_link?(lnk_full) 
+			}
 			
-				#Msg::debug(" оставлено: #{links.count}")
+				#Msg::debug(" оставлено: #{links_hash.count}")
 			
-			links.each { |lnk| @book.link_add(@current_id, lnk) }
+			links_hash.each_pair { |lnk_orig,lnk_full| 
+				@book.link_add(@current_id, lnk_full) 
+			}
 			
-			return links
+			return links_hash
 		end
 		
 
@@ -550,7 +550,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 5
+book.page_limit = 2
 
 book.threads = 1
 
