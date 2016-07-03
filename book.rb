@@ -237,7 +237,7 @@ class Book
 			@id = id
 			@uri = URI(uri)
 			@rule = @book.get_rule(@uri.to_s)
-				Msg::debug(" rule: #{@rule.class}")
+				#Msg::debug(" rule: #{@rule.class}")
 		end
 		
 		def work
@@ -248,7 +248,7 @@ class Book
 			collect_links
 			
 			result_page = @rule.process_page(@page)
-				Msg::debug "result_page: #{result_page.lines.count} строк"
+				#Msg::debug "result_page: #{result_page.lines.count} строк"
 			
 			save_page(result_page)
 			

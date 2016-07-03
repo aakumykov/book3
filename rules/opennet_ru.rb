@@ -27,11 +27,9 @@ class OpennetRu
 		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		@current_rule = get_rule(uri)
-			Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
+			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
 	
-		@@link_aliases = @@link_aliases.sort_by { |name,pattern|
-			pattern.length
-		}.reverse.to_h
+		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 	end
 
 	def accept_link?(uri)
