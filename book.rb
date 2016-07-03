@@ -52,9 +52,9 @@ class Book
 			CREATE TABLE #{@@table_name} (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				parent_id INTEGER,
-				uri TEXT,
-				file_name TEXT,
 				status VATCHAR(20) DEFAULT 'new',
+				uri TEXT,
+				title TEXT,
 				file TEXT
 			)"
 		)
@@ -244,13 +244,16 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			@page = get_page(@uri)
-		
-			collect_links
+			
+			@title = get_title(@page)
+			
+			links = collect_links(@page)
+				Msg::debug links
 			
 			result_page = @rule.process_page(@page)
 				#Msg::debug "result_page: #{result_page.lines.count} строк"
 			
-			save_page(result_page)
+			save_page(@title,result_page)
 			
 			return @id
 		end
@@ -259,21 +262,32 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}(#{uri})")
 			
 			data = load_page(uri: uri)
-			page = recode_page(data[:page], data[:headers])
+				#File.write('page1.html', data[:page])
 			
-				Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
+			page = recode_page(data[:page], data[:headers])
+				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
+				#File.write('page2.html', page)
 			
 			page = Nokogiri::HTML(page) { |config|
 				config.nonet
 				config.noerror
 				config.noent
 			}
+				#File.write('page3.html', page.to_html)
+			
+			page
+		end
+		
+		def get_title(dom)
+			title = dom.search('//title').text
+				Msg::debug "title: #{title}"
+			return title
 		end
 	
-		def collect_links
+		def collect_links(dom)
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			links = @page.search('//a').map { |a| a[:href] }.compact
+			links = dom.search('//a').map { |a| a[:href] }.compact
 			
 			links = links.map { |lnk| repair_uri(lnk) }.compact
 			
@@ -348,14 +362,15 @@ class Book
 			page_charset = nil
 			headers_charset = nil
 			
-			pattern = Regexp.new(/charset\s*=\s*['"]?(?<charset>[^'"]+)['"]?/i)
+			pattern_big=Regexp.new(/<\s*meta\s+http-equiv\s*=\s*['"]\s*content-type\s*['"]\s*content\s*=\s*['"]\s*text\s*\/\s*html\s*;\s+charset\s*=\s*(?<charset>[a-z0-9-]+)\s*['"]\s*\/?\s*>/i)
+			pattern_small=Regexp.new(/<\s*meta\s+charset\s*=\s*['"]?\s*(?<charset>[a-z0-9-]+)\s*['"]?\s*\/?\s*>/i)
 
-			page_charset = page.match(pattern)
+			page_charset = page.match(pattern_big) || page.match(pattern_small)
 			page_charset = page_charset[:charset] if not page_charset.nil?
 			
 			headers.each_pair { |k,v|
 				if 'content-type'==k.downcase.strip then
-					res = v.first.downcase.strip.match(pattern)
+					res = v.first.downcase.strip.match(/charset\s*=\s*(?<charset>[a-z0-9-]+)/i)
 					headers_charset = res[:charset].upcase if not res.nil?
 				end
 			}
@@ -370,8 +385,16 @@ class Book
 				page_charset, 
 				{ :replace => '_', :invalid => :replace, :undef => :replace }
 			)
-
-			page = page.gsub(pattern, "charset=UTF-8")
+			
+			page = page.gsub(
+				pattern_big,
+				"<meta http-equiv='content-type' content='text/html; charset=#{page_charset}'>"
+			)
+			
+			page = page.gsub(
+				pattern_small,
+				"<meta charset='#{page_charset}' />"
+			)
 
 			return page
 		end
@@ -434,13 +457,31 @@ class Book
 			return page
 		end
 
-		def save_page(page)
-			Msg::debug("#{self.class}.#{__method__}(page size: #{page.size})")
+		def save_page(title, body)
+			Msg::debug("#{self.class}.#{__method__}(page size: #{body.size})")
+			
+			html = <<MARKUP
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+    "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+	<title>#{title}</title>
+	<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+</head>
+
+<body>
+	#{body}
+</body>
+
+</html>
+MARKUP
 			
 			file_name = File.join(@book.text_dir, "#{SecureRandom::uuid}.html")
+				
 				#Msg::debug(" file_name: #{file_name}")
 			
-			File::write(file_name, page) and Msg::debug "записан файл #{file_name}"
+			File::write(file_name, html) and Msg::debug "записан файл #{file_name}"
 		end
 	end
 end
@@ -489,7 +530,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 12
 
 book.threads = 1
 
