@@ -124,12 +124,17 @@ class Book
 			end
 			
 			threads.each { |thr| 
-				id = thr.value
-				link_update(
-					set: { status: 'processed' },
-					where: { id: id }
-				)
-				@page_count += 1
+				begin
+					id = thr.value
+					link_update(
+						set: { status: 'processed' },
+						where: { id: id }
+					)
+					@page_count += 1
+				rescue => e
+					@error_count += 1
+					Msg::error e.message
+				end
 			}
 		end
 		
@@ -202,7 +207,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		#Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}()")
 		
 		condition = params[:where]
 		data = params[:set]
@@ -218,7 +223,7 @@ class Book
 		}.join(', ')
 		
 		sql = "UPDATE #{@@table_name} SET #{data} WHERE #{condition}"
-			Msg::debug("#{self.class}.#{__method__}(), #{sql}")
+			#Msg::debug("#{self.class}.#{__method__}(), #{sql}")
 		
 		@@db.execute(sql)
 	end
@@ -569,13 +574,13 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 12
+book.page_limit = 32
 
-book.threads = 1
+book.threads = 4
 
 book.prepare
 book.save
