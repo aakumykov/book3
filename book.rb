@@ -223,9 +223,18 @@ class Book
 		@@db.execute(sql)
 	end
 	
+	def uri2file_path(uri)
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		
+		file_path = File.join(@text_dir, Digest::MD5.hexdigest(uri)+'.html')
+			Msg::debug " file_path: #{file_path}"
+		
+		return file_path
+	end
+	
 	
 	private
-	
+		
 	class Processor
 		
 		def initialize(book, id, uri)
@@ -241,8 +250,8 @@ class Book
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
 			
-			@file_name = Digest::MD5.hexdigest(@current_uri) + '.html'
-			@file_path = File.join(@book.text_dir, @file_name)
+			@file_path = @book.uri2file_path(@current_uri)
+			@file_name = File.basename(@file_path)
 
 				#Msg::debug(" rule: #{@current_rule.class}")
 		end
@@ -331,7 +340,7 @@ class Book
 			Msg::debug("#{__method__}(links: #{links_hash.count}, page: #{page.size} bytes)")
 			
 			#~ links_hash.each_pair { |lnk_orig,lnk_full|
-				#~ lnk_local = Digest::MD5.hexdigest(lnk_full)
+				#~ lnk_local = @book.uri2file_path(lnk_full)
 				#~ page.gsub!(lnk_orig, lnk_local)
 			#~ }
 			
