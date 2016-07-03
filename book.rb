@@ -19,7 +19,7 @@ class Book
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
 	
-	@@rules_dir = 'rules'
+	@@current_rules_dir = 'rules'
 	@@work_dir = 'tmp'
 	
 	@@threads_count = 3
@@ -181,28 +181,31 @@ class Book
 	def save
 		Msg::debug("#{self.class}.#{__method__}()")
 	end
-
-
-	#~ def get_next_link
-		#~ Msg::debug("#{self.class}.#{__method__}()", nobr: true)
-		#~ 
-		#~ res = @@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT 1").first
-		#~ 
-		#~ return [nil,nil] if res.nil?
-		#~ 
-		#~ id = res.first
-		#~ uri = res.last
-		#~ 
-			#~ Msg::debug("-> id: #{id}, uri: #{uri}")
-		#~ 
-		#~ @@db.execute "UPDATE #{@@table_name} SET status='in_work' WHERE id='#{id}' "
-		#~ 
-		#~ return [id, uri]
-	#~ end
 	
 	def get_fresh_links
 		Msg::debug("#{self.class}.#{__method__}()")
 		@@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
+	end
+
+	# update_link({key:value [,key:value]},{key:value [,key:value]}
+	def update_link(params)
+		Msg::debug("#{self.class}.#{__method__}()")
+		
+		condition = params[:where]
+		data = params[:set]
+		
+		condition = condition.to_a.map { |k,v| 
+			v="'#{v}'" if v.is_a? String
+			"#{k}=#{v}" 
+		}.join(' AND ')
+		
+		data = data.to_a.map { |k,v| 
+			v="'#{v}'" if v.is_a? String
+			"#{k}=#{v}" 
+		}.join(', ')
+		
+		sql = "UPDATE #{@@table_name} SET #{data} WHERE #{condition}"
+			Msg::debug " #{sql}"
 	end
 	
 	def get_rule(uri)
@@ -216,10 +219,10 @@ class Book
 		
 		case host
 		when 'opennet.ru'
-			require "./#{@@rules_dir}/#{file_name}"
+			require "./#{@@current_rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		else
-			require "./#{@@rules_dir}/default.rb"
+			require "./#{@@current_rules_dir}/default.rb"
 			rule = Object.const_get(:Default).new(uri)
 		end
 	end
@@ -234,28 +237,28 @@ class Book
 			
 			@book = book
 			
-			@id = id
-			@uri = URI(uri)
-			@rule = @book.get_rule(@uri.to_s)
-				#Msg::debug(" rule: #{@rule.class}")
+			@current_id = id
+			@current_uri = URI(uri)
+			@current_rule = @book.get_rule(@current_uri.to_s)
+				#Msg::debug(" rule: #{@current_rule.class}")
 		end
 		
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			@page = get_page(@uri)
+			@page = get_page(@current_uri)
 			
 			@title = get_title(@page)
 			
 			links = collect_links(@page)
 				#Msg::debug links
 			
-			result_page = @rule.process_page(@page)
+			result_page = @current_rule.process_page(@page)
 				#Msg::debug "result_page: #{result_page.lines.count} строк"
 			
 			save_page(@title,result_page)
 			
-			return @id
+			return @current_id
 		end
 		
 		def get_page(uri)
@@ -307,11 +310,11 @@ class Book
 			
 				Msg::debug(" собрано ссылок: #{links.count}")
 			
-			links = links.keep_if { |lnk| @rule.accept_link?(lnk) }
+			links = links.keep_if { |lnk| @current_rule.accept_link?(lnk) }
 			
 				Msg::debug(" оставлено: #{links.count}")
 			
-			links.each { |lnk| @book.add_source(@id, lnk) }
+			links.each { |lnk| @book.add_source(@current_id, lnk) }
 			
 			return links
 		end
@@ -421,8 +424,8 @@ class Book
 			uri = uri.gsub(/\/+$/,'')
 				#Msg::debug("gsub: '#{uri}'")
 			uri = URI(uri)
-			uri.host = @uri.host if uri.host.nil?
-			uri.scheme = @uri.scheme if uri.scheme.nil?
+			uri.host = @current_uri.host if uri.host.nil?
+			uri.scheme = @current_uri.scheme if uri.scheme.nil?
 			
 			uri.to_s
 		end
@@ -491,11 +494,16 @@ class Book
 </html>
 MARKUP
 			
-			file_name = File.join(@book.text_dir, "#{SecureRandom::uuid}.html")
-				
+			file_name = "#{SecureRandom::uuid}.html"
+			file = File.join(@book.text_dir, file_name)				
 				#Msg::debug(" file_name: #{file_name}")
 			
-			File::write(file_name, html) and Msg::debug "записан файл #{file_name}"
+			File::write(file, html) and Msg::debug "записан файл #{file_name}"
+			
+			@book.update_link(
+				set: {file: file_name}, 
+				where: {id: @current_id}
+			)
 		end
 	end
 end
@@ -544,7 +552,7 @@ book.add_source 'http://opennet.ru'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 12
+book.page_limit = 2
 
 book.threads = 1
 
