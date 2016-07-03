@@ -247,7 +247,8 @@ class Book
 		
 			collect_links
 			
-			result_page = process_page
+			result_page = @rule.process_page(@page)
+				Msg::debug "result_page: #{result_page.lines.count} строк"
 			
 			save_page(result_page)
 			
@@ -389,13 +390,6 @@ class Book
 			uri.to_s
 		end
 		
-		def process_page
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			page = @rule.process_page(@page)
-				Msg::debug(" page: #{page.class}")
-		end
-		
 		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
 		# перед загрузкой. Хэш используется для "локализации" html-страницы.
 		def load_images(params)
@@ -441,12 +435,12 @@ class Book
 		end
 
 		def save_page(page)
-			Msg::debug("#{self.class}.#{__method__}()")
+			Msg::debug("#{self.class}.#{__method__}(page size: #{page.size})")
 			
 			file_name = File.join(@book.text_dir, "#{SecureRandom::uuid}.html")
-				Msg::debug(" file_name: #{file_name}")
+				#Msg::debug(" file_name: #{file_name}")
 			
-			File::write(file_name, page)
+			File::write(file_name, page) and Msg::debug "записан файл #{file_name}"
 		end
 	end
 end
