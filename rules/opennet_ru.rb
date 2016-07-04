@@ -77,15 +77,15 @@ class OpennetRu
 
 	# Страничные методы
 	def DefaultPage(dom)
-		dom.search('//body').to_html
+		dom.search('//body')
 	end
 
 	def MainPage(dom)
-		dom.search('//body//table')[2].to_html
+		dom.search('//body//table')[2]
 	end
 
 	def NewsArticle(dom)
-		dom.search("//form[@action='/cgi-bin/openforum/ch_cat.cgi']").inner_html
+		dom.search("//form[@action='/cgi-bin/openforum/ch_cat.cgi']")
 	end
 end
 

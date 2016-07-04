@@ -124,17 +124,17 @@ class Book
 			end
 			
 			threads.each { |thr| 
-				begin
+				#begin
 					id = thr.value
 					link_update(
 						set: { status: 'processed' },
 						where: { id: id }
 					)
 					@page_count += 1
-				rescue => e
-					@error_count += 1
-					Msg::error e.message
-				end
+				#~ rescue => e
+					#~ @error_count += 1
+					#~ Msg::error e.message
+				#~ end
 			}
 		end
 		
@@ -342,13 +342,23 @@ class Book
 		end
 		
 		def make_links_offline(links_hash, page)
-			Msg::debug("#{__method__}(links: #{links_hash.count}, page: #{page.size} bytes)")
+			Msg::debug("#{__method__}()")
 			
-			links_hash.each_pair { |lnk_orig,lnk_full|
-				lnk_local = @book.uri2file_path(lnk_full)
-				page.gsub!(lnk_orig, lnk_local)
-					#Msg::debug " #{lnk_orig} --> #{lnk_local}"
+			page.search("//a").map { |a|
+				links_hash.each_pair { |lnk_orig,lnk_full|
+					if a[:href]==lnk_orig then
+						lnk_local = @book.uri2file_path(lnk_full) 
+							#Msg::debug "локализация ссылки '#{lnk_orig}' -> '#{lnk_local}'"
+						a[:href] = lnk_local
+					end
+				}
 			}
+			
+			#~ links_hash.each_pair { |lnk_orig,lnk_full|
+				#~ lnk_local = @book.uri2file_path(lnk_full)
+				#~ page.gsub!(lnk_orig, lnk_local)
+					#~ #Msg::debug " #{lnk_orig} --> #{lnk_local}"
+			#~ }
 			
 			page
 		end
@@ -505,7 +515,9 @@ class Book
 		end
 
 		def save_page(title, body)
-			Msg::debug("#{self.class}.#{__method__}(page size: #{body.size})")
+			Msg::debug("#{self.class}.#{__method__}(#{title})")
+			
+			body = body.to_html
 			
 			html = <<MARKUP
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
@@ -578,9 +590,9 @@ book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'http://geektimes.ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 32
+book.page_limit = 12
 
-book.threads = 4
+book.threads = 1
 
 book.prepare
 book.save
