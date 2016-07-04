@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #coding: UTF-8
-system 'clear'
+#system 'clear'
 
 require 'sqlite3'
 require 'net/http'
@@ -22,16 +22,20 @@ class Book
 	@@rules_dir = 'rules'
 	@@work_dir = 'tmp'
 	
+	@@contacts_file = 'contacts4header.txt'
+	
 	@@threads_count = 3
 
 	def initialize
 		Msg::debug("#{self.class}.#{__method__}()")
 	
-		@contacts = File.read('contacts4header.txt')
-	
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
 		@language = 'ru'
+		
+		# Для скачивания Википедии в заголовок необходимо вставлять контактную информацию
+		raise "Не найден файл контактов (#{@@contacts_file})" if ! File.exists?(@@contacts_file)
+		@contacts = File.read(@@contacts_file)
 
 		@source = []
 
@@ -117,6 +121,7 @@ class Book
 			threads = []
 			
 			links = get_fresh_links
+				Msg::debug "Ссылок на цикл: #{links.count}"
 			
 			links.each do |row|
 				id, uri = row
