@@ -14,7 +14,7 @@ class Book
 	
 	# внутреннее
 	attr_accessor :page_count
-	attr_reader :text_dir, :images_dir
+	attr_reader :text_dir, :images_dir, :contacts
 
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'table1'
@@ -26,6 +26,8 @@ class Book
 
 	def initialize
 		Msg::debug("#{self.class}.#{__method__}()")
+	
+		@contacts = File.read('contacts4header.txt')
 	
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
@@ -189,6 +191,9 @@ class Book
 		when 'opennet.ru'
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
+		when 'ru.wikipedia.org'
+			require "./#{@@rules_dir}/#{file_name}"
+			rule = Object.const_get(class_name).new(uri)
 		else
 			require "./#{@@rules_dir}/default.rb"
 			rule = Object.const_get(:Default).new(uri)
@@ -268,11 +273,12 @@ class Book
 			
 			@title = get_title(@page)
 			
-			links_hash = collect_links(@page)
 				#Msg::debug links
 			
 			result_page = @current_rule.process_page(@page)
 				#Msg::debug " result_page: #{result_page.lines.count} строк"
+				
+			links_hash = collect_links(result_page)
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
@@ -315,6 +321,10 @@ class Book
 			links = dom.search('//a').map { |a| a[:href] }.compact
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
+				
+				Msg::debug " ссылок до уникализации #{links.count}"
+			links = links.uniq
+				Msg::debug " ссылок после уникализации #{links.count}"
 			
 			links_hash = links.map { |lnk| 
 				#Msg::debug "lnk: #{lnk}"
@@ -326,13 +336,13 @@ class Book
 				end
 			}.compact.to_h
 			
-				#Msg::debug(" собрано ссылок: #{links_hash.count}")
+				Msg::debug(" собрано ссылок: #{links_hash.count}")
 			
 			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
 				@current_rule.accept_link?(lnk_full) 
 			}
 			
-				#Msg::debug(" оставлено: #{links_hash.count}")
+				Msg::debug(" оставлено ссылок: #{links_hash.count}")
 			
 			links_hash.each_pair { |lnk_orig,lnk_full| 
 				@book.link_add(@current_id, lnk_full) 
@@ -390,7 +400,7 @@ class Book
 			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
 
 				request = Net::HTTP::Get.new(uri.request_uri)
-				request['User-Agent'] = 'Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0'
+				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
 
 				response = http.request request
 
@@ -586,11 +596,10 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 book.add_source 'http://opennet.ru'
-book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
-#book.add_source 'http://geektimes.ru'
-#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+book.add_source 'https://ru.wikipedia.org'
 
-book.page_limit = 12
+book.page_limit = 2
 
 book.threads = 1
 
