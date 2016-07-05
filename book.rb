@@ -76,10 +76,10 @@ class Book
 			Dir.mkdir(@text_dir) or raise "невозможно создать каталог #{@text_dir}"
 		end
 		
-		@images_dir = File.join(@@work_dir,'images')
+		@image_dir = File.join(@@work_dir,'images')
 		
-		if not Dir.exists?(@images_dir) then
-			Dir.mkdir(@images_dir) or raise "невозможно создать каталог #{@images_dir}"
+		if not Dir.exists?(@image_dir) then
+			Dir.mkdir(@image_dir) or raise "невозможно создать каталог #{@image_dir}"
 		end
 	end
 
@@ -240,10 +240,25 @@ class Book
 		@@db.execute(sql)
 	end
 	
-	def uri2file_path(uri)
+	# arg = {mode_name: uri}
+	def uri2file_path(arg)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+
+		mode = arg.keys.first
+		uri = arg.values.first
 		
-		file_path = File.join(@text_dir, Digest::MD5.hexdigest(uri)+'.html')
+		case mode
+		when :text
+			dir = @text_dir
+			ext = 'html'
+		when :image
+			dir = @image_dir
+			ext = uri.split('.').last.strip
+		else
+			raise "неизвестный режим '#{mode}'"
+		end
+		
+		file_path = File.join(dir, Digest::MD5.hexdigest(uri)+'.'+ext)
 			#Msg::debug " file_path: #{file_path}"
 		
 		return file_path
@@ -268,7 +283,7 @@ class Book
 			@current_rule = @book.get_rule(@current_uri.to_s)
 				Msg::debug " @current_rule: #{@current_rule}"
 			
-			@file_path = @book.uri2file_path(@current_uri)
+			@file_path = @book.uri2file_path(text: @current_uri)
 			@file_name = File.basename(@file_path)
 
 				#Msg::debug(" rule: #{@current_rule.class}")
@@ -283,7 +298,10 @@ class Book
 			result_page = @current_rule.process_page(@page)
 				
 			links_hash = collect_links(result_page)
+			
 			result_page = make_links_offline(links_hash, result_page)
+			
+			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -362,18 +380,12 @@ class Book
 			page.search("//a").map { |a|
 				links_hash.each_pair { |lnk_orig,lnk_full|
 					if a[:href]==lnk_orig then
-						lnk_local = @book.uri2file_path(lnk_full) 
+						lnk_local = @book.uri2file_path(text: lnk_full) 
 							#Msg::debug "локализация ссылки '#{lnk_orig}' -> '#{lnk_local}'"
 						a[:href] = lnk_local
 					end
 				}
 			}
-			
-			#~ links_hash.each_pair { |lnk_orig,lnk_full|
-				#~ lnk_local = @book.uri2file_path(lnk_full)
-				#~ page.gsub!(lnk_orig, lnk_local)
-					#~ #Msg::debug " #{lnk_orig} --> #{lnk_local}"
-			#~ }
 			
 			page
 		end
@@ -485,38 +497,16 @@ class Book
 			return uri.to_s
 		end
 		
-		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
-		# перед загрузкой. Хэш используется для "локализации" html-страницы.
-		def load_images(params)
+		def load_images(dom)
 			Msg::debug("#{self.class}.#{__method__}()")
 			
-			links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-			
-			links_hash = {}
-			
-			links.each { |lnk| links_hash[lnk] = nil }
-			
-			links_hash.each_key { |lnk|
-				links_hash[lnk] = repair_uri(params[:uri], lnk)
+			dom.search("//img").each { |img|
+				image_uri = repair_uri(img[:src])
+				image_file = @book.uri2file_path(image: image_uri)
+					Msg::debug " #{image_uri}' (#{image_file})"
 			}
 			
-			links_hash.each_pair { |k,v| Msg::debug(" #{k} ---> #{v}") }
-			
-			#~ links_hash.each_pair { |orig_link,full_link|
-				#~ begin
-					#~ image_data = load_page(uri: full_link)
-					#~ image_file = File.join(@images_dir,"#{rand(10000)}.jpg")
-					#~ File.write(image_file,image_data)
-					#~ Msg::debug("загружено изображение (#{full_link}")
-				#~ rescue => e
-					#~ Msg::debug("ошибка загрузки изображения (#{full_link})")
-					#~ image_file = nil
-				#~ end
-				#~ 
-				#~ links_hash[orig_link] = image_file
-			#~ }
-			
-			links_hash
+			dom
 		end
 		
 		def fix_page_images(page, images_hash)
@@ -530,7 +520,7 @@ class Book
 		end
 
 		def save_page(title, body)
-			Msg::debug("#{self.class}.#{__method__}(#{title})")
+			Msg::debug("#{self.class}.#{__method__}('#{title}')")
 			
 			body = body.to_html
 			
@@ -606,7 +596,7 @@ book.language = 'ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 1
 
 book.threads = 1
 

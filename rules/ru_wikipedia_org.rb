@@ -18,8 +18,8 @@ class RuWikipediaOrg < DefaultSite
 		an_article: {
 			redirect: lambda { |uri| "#{uri}?printable=yes" },
 			processor: :AnArticle,
-			#links: [ ],
-			links: [ :an_article ],
+			links: [ ],
+			#links: [ :an_article ],
 		},
 		any_page: {
 			processor: :AnyPage,
