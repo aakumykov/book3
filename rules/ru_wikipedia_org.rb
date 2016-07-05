@@ -1,7 +1,6 @@
 # coding: utf-8
-system 'clear'
 
-class RuWikipediaOrg
+class RuWikipediaOrg < DefaultSite
 	@@link_aliases = {
 		main_page: [
 			'^https://ru\.wikipedia\.org$',
@@ -21,77 +20,12 @@ class RuWikipediaOrg
 			links: [ :an_article ],
 		},
 		any_page: {
-			processor: :DefaultPage,
+			processor: :AnyPage,
 			links: [],
 		},
 	}
-
-	def initialize(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
-		
-		@current_rule = get_rule(uri)
-			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
 	
-		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
-	end
-
-	def accept_link?(uri)
-		#Msg::debug "#{self.class}.#{__method__}(#{uri}))"
-		
-		link_name = uri2name(uri)
-			#Msg::debug "link_name: #{link_name}"
-		
-		@current_rule[:links].include?(link_name.to_sym)
-	end
-
-	def process_page(page)
-		self.send(@current_rule[:processor], page)
-	end
-
-
 	private
-
-	# Служебные методы
-	def get_rule(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
-		
-		link_name = uri2name(uri)
-			#Msg::debug " link_name: #{link_name}"
-		
-		rule = name2rule(link_name)
-			#Msg::debug " rule: #{rule}"
-		
-		return rule
-	end
-	
-	def uri2name(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}))"
-		
-		begin
-			@@link_aliases.each_pair { |name,pattern|
-				pattern = [pattern] if not pattern.is_a? Array				
-				pattern = Regexp.union( pattern.map { |p| Regexp.new(p) } )
-				raise name.to_s if uri.match(pattern)
-			}
-			
-			Msg::error "не найдено ни одного правила"
-			
-			return 'any_page'
-		rescue => e
-			name = e.message
-				Msg::debug " найдено правило '#{name}'"
-			name
-		end
-	end
-
-	def name2rule(name)
-		@@rules[name.to_sym]
-	end
-
-	# Страничные методы
-	def DefaultPage(dom)
-		dom.search('//body')
-	end
 
 	def MainPage(dom)
 		dom.search("//div[@id='content']")
@@ -104,8 +38,3 @@ class RuWikipediaOrg
 		dom
 	end
 end
-
-
-#o = OpennetRu.new('http://opennet.ru')
-#puts o.accept_link?('http://opennet.ru')
-#puts o.accept_link?('http://www.opennet.ru/opennews/art.shtml?num=44713')

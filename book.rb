@@ -186,6 +186,8 @@ class Book
 	def get_rule(uri)
 		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
+		require "./#{@@rules_dir}/default.rb" if not Object.const_defined? :DefaultSite
+		
 		host = URI(uri).host
 		file_name = host.gsub('.','_') + '.rb'
 		class_name = host.split('.').map{|c| c.capitalize }.join
@@ -279,8 +281,8 @@ class Book
 			
 			result_page = @current_rule.process_page(@page)
 				
-			#links_hash = collect_links(result_page)
-			#result_page = make_links_offline(links_hash, result_page)
+			links_hash = collect_links(result_page)
+			result_page = make_links_offline(links_hash, result_page)
 			
 			save_page(@title,result_page)
 			
