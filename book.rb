@@ -242,7 +242,7 @@ class Book
 	
 	# arg = {mode_name: uri}
 	def uri2file_path(arg)
-		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		Msg::debug("#{self.class}.#{__method__}(#{arg})")
 
 		mode = arg.keys.first
 		uri = arg.values.first
@@ -253,13 +253,18 @@ class Book
 			ext = 'html'
 		when :image
 			dir = @image_dir
-			ext = uri.split('.').last.strip
+			ext = uri.match('\.(?<ext>[a-z]+)$')
+			if not ext.nil? then
+				ext = ext[:ext]
+			else
+				raise 'неизвестный тип изображения'
+			end
 		else
 			raise "неизвестный режим '#{mode}'"
 		end
 		
 		file_path = File.join(dir, Digest::MD5.hexdigest(uri)+'.'+ext)
-			#Msg::debug " file_path: #{file_path}"
+			Msg::debug " file_path: #{file_path}"
 		
 		return file_path
 	end
@@ -379,21 +384,27 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			dom.search("//img").each { |img|
+				Msg::debug ''
 				image_uri = repair_uri(img[:src])
 				file_path = @book.uri2file_path(image: image_uri)
 				file_name = File.basename(file_path)
-					#~ Msg::debug " #{image_uri}'"
-					#~ Msg::debug " #{image_file}"
-					#~ Msg::debug ''
-				image_data = get_image(image_uri)
+					Msg::debug " image_uri: '#{image_uri}'"
+					Msg::debug " file_name: #{file_name}"
 				
-				begin
-					File.write(file_path, image_data[:data])
-					img[:src] = file_path
-						Msg::debug " сохранена картинка '#{file_path}'"
-				rescue => e
-					Msg::error e.message
+				if File.exists? file_path then
+					Msg::debug " картинка уже загружена (#{file_name})"
+				else
+					begin
+						image_data = get_image(image_uri)
+						File.write(file_path, image_data[:data])
+							Msg::debug " загружена картинка '#{file_path}'"
+					rescue => e
+						Msg::error e.message
+						file_path = image_uri
+					end
 				end
+				
+				img[:src] = file_path
 			}
 			
 			dom
