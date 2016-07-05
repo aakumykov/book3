@@ -52,11 +52,11 @@ class DefaultSite
 	def get_rule(uri)
 		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
-		link_name = uri2name(uri)
-			#Msg::debug " link_name: #{link_name}"
+		link_alias = uri2name(uri)
+			Msg::debug " псевдоним сылки: #{link_alias}"
 		
-		rule = name2rule(link_name)
-			#Msg::debug " rule: #{rule}"
+		rule = name2rule(link_alias)
+			#Msg::debug " правило: #{rule}"
 		
 		return rule
 	end

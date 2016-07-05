@@ -281,7 +281,7 @@ class Book
 			@current_host = the_uri.host
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
-				Msg::debug " @current_rule: #{@current_rule}"
+				#Msg::debug " @current_rule: #{@current_rule}"
 			
 			@file_path = @book.uri2file_path(text: @current_uri)
 			@file_name = File.basename(@file_path)
@@ -301,7 +301,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			result_page = load_images(result_page)
+			#result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -328,6 +328,67 @@ class Book
 				#File.write('page3.html', page.to_html)
 			
 			page
+		end
+		
+		def get_image(uri)
+			Msg::debug("#{__method__}(#{uri})")
+
+			data = load_page(uri: uri)
+		end
+		
+		def load_page(arg)
+			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+
+			#uri = URI.escape(uri) if not uri.urlencoded?
+			
+			uri = URI(arg[:uri])
+			redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
+			
+			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
+
+			data = {}
+
+			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
+
+				request = Net::HTTP::Get.new(uri.request_uri)
+				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
+
+				response = http.request request
+
+				case response
+				when Net::HTTPRedirection then
+					location = response['location']
+					puts "перенаправление на '#{location}'"
+					data =  send(
+						__method__,
+						{ :uri => location, :redirects_limit => (redirects_limit-1) }
+					)
+				when Net::HTTPSuccess then
+					data = {
+						:page => response.body,
+						:headers => response.to_hash,
+					}
+				else
+					response.value
+				end
+			}
+		  
+			return data
+		end
+		
+		def load_images(dom)
+			Msg::debug("#{self.class}.#{__method__}()")
+			
+			dom.search("//img").each { |img|
+				image_uri = repair_uri(img[:src])
+				image_file = @book.uri2file_path(image: image_uri)
+					#Msg::debug " #{image_uri}' (#{image_file})"
+				
+				image_data = get_image(image_uri)
+					Msg::debug " #{image_data.keys}"
+			}
+			
+			dom
 		end
 		
 		def get_title(dom)
@@ -389,62 +450,6 @@ class Book
 			
 			page
 		end
-		
-
-		def get_image(uri)
-			Msg::debug("#{__method__}(#{uri})")
-
-			data = load_page(uri: uri)
-
-			#~ return {
-			#~ data: data[:page],
-			#~ extension: 'jpg',
-			#~ }
-		end
-		
-		def load_page(arg)
-			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
-
-			#uri = URI.escape(uri) if not uri.urlencoded?
-			
-			uri = URI(arg[:uri])
-			redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
-			
-			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-
-			data = {}
-
-			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
-
-				request = Net::HTTP::Get.new(uri.request_uri)
-				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
-
-				response = http.request request
-
-				case response
-				when Net::HTTPRedirection then
-					location = response['location']
-					puts "перенаправление на '#{location}'"
-					data =  send(
-						__method__,
-						{ :uri => location, :redirects_limit => (redirects_limit-1) }
-					)
-				when Net::HTTPSuccess then
-					data = {
-						:page => response.body,
-						:headers => response.to_hash,
-					}
-				else
-					response.value
-				end
-			}
-			
-			#puts "========== Headers: =========="
-			#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
-			#puts "=========================="
-		  
-			return data
-		end
 
 		def recode_page(page, headers, target_charset='UTF-8')
 			page_charset = nil
@@ -497,28 +502,6 @@ class Book
 			return uri.to_s
 		end
 		
-		def load_images(dom)
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			dom.search("//img").each { |img|
-				image_uri = repair_uri(img[:src])
-				image_file = @book.uri2file_path(image: image_uri)
-					Msg::debug " #{image_uri}' (#{image_file})"
-			}
-			
-			dom
-		end
-		
-		def fix_page_images(page, images_hash)
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			images_hash.each_pair { |old_src, new_src|
-				page = page.gsub(old_src, new_src)
-			}
-			
-			return page
-		end
-
 		def save_page(title, body)
 			Msg::debug("#{self.class}.#{__method__}('#{title}')")
 			
@@ -594,7 +577,8 @@ book.language = 'ru'
 #book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 book.page_limit = 1
 
