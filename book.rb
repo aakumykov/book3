@@ -275,17 +275,12 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			@page = get_page(@current_uri)
-			
 			@title = get_title(@page)
 			
-				#Msg::debug links
-			
 			result_page = @current_rule.process_page(@page)
-				#Msg::debug " result_page: #{result_page.lines.count} строк"
 				
-			links_hash = collect_links(result_page)
-			
-			result_page = make_links_offline(links_hash, result_page)
+			#links_hash = collect_links(result_page)
+			#result_page = make_links_offline(links_hash, result_page)
 			
 			save_page(@title,result_page)
 			
@@ -602,11 +597,11 @@ book.language = 'ru'
 
 #book.add_source 'http://opennet.ru'
 #book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
-book.add_source 'https://ru.wikipedia.org'
-book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org'
+#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
+book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 2
+book.page_limit = 1
 
 book.threads = 1
 
