@@ -27,6 +27,20 @@ class DefaultSite
 		@current_rule[:links].include?(link_name.to_sym)
 	end
 
+	def redirect(uri)
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		#Msg::debug " @current_rule[:redirect]: #{@current_rule[:redirect]}"
+		#Msg::debug " @current_rule[:redirect].nil?: #{@current_rule[:redirect].nil?}"
+		
+		if @current_rule[:redirect].nil? then
+			uri
+		else
+			new_uri = @current_rule[:redirect].call(uri)
+				Msg::debug " программное перенаправлние на '#{new_uri}'"
+			new_uri
+		end
+	end
+
 	def process_page(page)
 		self.send(@current_rule[:processor], page)
 	end

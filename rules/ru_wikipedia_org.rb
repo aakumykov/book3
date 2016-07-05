@@ -16,7 +16,9 @@ class RuWikipediaOrg < DefaultSite
 			links: [ :an_article ]
 		},
 		an_article: {
+			redirect: lambda { |uri| "#{uri}?printable=yes" },
 			processor: :AnArticle,
+			#links: [ ],
 			links: [ :an_article ],
 		},
 		any_page: {
@@ -33,8 +35,7 @@ class RuWikipediaOrg < DefaultSite
 
 	def AnArticle(dom)
 		#MainPage(dom)
-		dom.search("//div[@id='content']").search("//table[@class='navbox']").remove
-		dom.search("//div[@id='mw-navigation']").remove
+		dom.search("//div[@id='content']")
 		dom
 	end
 end

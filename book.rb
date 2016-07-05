@@ -266,6 +266,7 @@ class Book
 			@current_host = the_uri.host
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
+				Msg::debug " @current_rule: #{@current_rule}"
 			
 			@file_path = @book.uri2file_path(@current_uri)
 			@file_name = File.basename(@file_path)
@@ -291,6 +292,8 @@ class Book
 		
 		def get_page(uri)
 			Msg::debug("#{self.class}.#{__method__}(#{uri})")
+			
+			uri = @current_rule.redirect(uri)
 			
 			data = load_page(uri: uri)
 				#File.write('page1.html', data[:page])
@@ -603,7 +606,7 @@ book.language = 'ru'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
-book.page_limit = 1
+book.page_limit = 2
 
 book.threads = 1
 
