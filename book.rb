@@ -313,10 +313,9 @@ class Book
 			
 			uri = @current_rule.redirect(uri)
 			
-			data = load_page(uri: uri)
-				#File.write('page1.html', data[:page])
+			data = download_object(uri: uri)
 			
-			page = recode_page(data[:page], data[:headers])
+			page = recode_page(data[:data], data[:headers])
 				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
 				#File.write('page2.html', page)
 			
@@ -333,10 +332,10 @@ class Book
 		def get_image(uri)
 			#Msg::debug("#{__method__}(#{uri})")
 
-			data = load_page(uri: uri)
+			download_object(uri: uri)
 		end
 		
-		def load_page(arg)
+		def download_object(arg)
 			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
 			#uri = URI.escape(uri) if not uri.urlencoded?
@@ -346,7 +345,7 @@ class Book
 			
 			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
 
-			data = {}
+			result = {}
 
 			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
 
@@ -359,13 +358,13 @@ class Book
 				when Net::HTTPRedirection then
 					location = response['location']
 					puts "перенаправление на '#{location}'"
-					data =  send(
+					result =  send(
 						__method__,
 						{ :uri => location, :redirects_limit => (redirects_limit-1) }
 					)
 				when Net::HTTPSuccess then
-					data = {
-						:page => response.body,
+					result = {
+						:data => response.body,
 						:headers => response.to_hash,
 					}
 				else
@@ -373,7 +372,7 @@ class Book
 				end
 			}
 		  
-			return data
+			return result
 		end
 		
 		def load_images(dom)
@@ -389,7 +388,7 @@ class Book
 				image_data = get_image(image_uri)
 				
 				begin
-					File.write(file_path, image_data[:page])
+					File.write(file_path, image_data[:data])
 					img[:src] = file_path
 						Msg::debug " сохранена картинка '#{file_path}'"
 				rescue => e
