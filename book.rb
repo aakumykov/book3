@@ -184,7 +184,7 @@ class Book
 	end
 
 	def get_rule(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		require "./#{@@rules_dir}/default.rb" if not Object.const_defined? :DefaultSite
 		
@@ -270,7 +270,7 @@ class Book
 	class Processor
 		
 		def initialize(book, id, uri)
-			Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
+			#Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
 			
 			the_uri = URI(uri)
 			
@@ -301,7 +301,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			#result_page = load_images(result_page)
+			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -331,7 +331,7 @@ class Book
 		end
 		
 		def get_image(uri)
-			Msg::debug("#{__method__}(#{uri})")
+			#Msg::debug("#{__method__}(#{uri})")
 
 			data = load_page(uri: uri)
 		end
@@ -381,18 +381,27 @@ class Book
 			
 			dom.search("//img").each { |img|
 				image_uri = repair_uri(img[:src])
-				image_file = @book.uri2file_path(image: image_uri)
-					#Msg::debug " #{image_uri}' (#{image_file})"
-				
+				file_path = @book.uri2file_path(image: image_uri)
+				file_name = File.basename(file_path)
+					#~ Msg::debug " #{image_uri}'"
+					#~ Msg::debug " #{image_file}"
+					#~ Msg::debug ''
 				image_data = get_image(image_uri)
-					Msg::debug " #{image_data.keys}"
+				
+				begin
+					File.write(file_path, image_data)
+					img[:src] = file_path
+						Msg::debug " сохранена картинка '#{file_path}'"
+				rescue => e
+					Msg::error e.message
+				end
 			}
 			
 			dom
 		end
 		
 		def get_title(dom)
-			Msg::debug("#{self.class}.#{__method__}()")
+			#Msg::debug("#{self.class}.#{__method__}()")
 			
 			title = dom.search('//title').text
 				#Msg::debug " title: #{title}"

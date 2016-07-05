@@ -10,7 +10,7 @@ class DefaultSite
 	}
 	
 	def initialize(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		@current_rule = get_rule(uri)
 			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
@@ -28,9 +28,7 @@ class DefaultSite
 	end
 
 	def redirect(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
-		#Msg::debug " @current_rule[:redirect]: #{@current_rule[:redirect]}"
-		#Msg::debug " @current_rule[:redirect].nil?: #{@current_rule[:redirect].nil?}"
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		if @current_rule[:redirect].nil? then
 			uri
@@ -50,7 +48,7 @@ class DefaultSite
 
 	# Служебные методы
 	def get_rule(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		link_alias = uri2name(uri)
 			Msg::debug " псевдоним сылки: #{link_alias}"
