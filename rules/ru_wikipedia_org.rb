@@ -3,8 +3,10 @@ system 'clear'
 
 class RuWikipediaOrg
 	@@link_aliases = {
-		#main_page: '^http://ru.wikipedia\.org$',
-		main_page: '^https://ru\.wikipedia\.org/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0$',
+		main_page: [
+			'^https://ru.wikipedia\.org$',
+			'^https://ru\.wikipedia\.org/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0$',
+		],
 		an_article: '/wiki/[^/:]+$',
 		any_page: '^.+$'
 	}
@@ -54,7 +56,7 @@ class RuWikipediaOrg
 		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		link_name = uri2name(uri)
-			#Msg::debug " link_name: #{link_name}"
+			Msg::debug " link_name: #{link_name}"
 		
 		rule = name2rule(link_name)
 			#Msg::debug " rule: #{rule}"
@@ -63,12 +65,20 @@ class RuWikipediaOrg
 	end
 	
 	def uri2name(uri)
+		Msg::debug "#{self.class}.#{__method__}(#{uri}))"
+		
 		begin
 			@@link_aliases.each_pair { |name,pattern|
-				raise name.to_s if uri.match(pattern)
+				raise name.to_s if uri.match( Regexp.union(pattern) )
 			}
+			
+				Msg::error "не найдено ни одного правила"
+			
+			return 'any_page'
 		rescue => e
-			e.message
+			name = e.message
+				Msg::debug " name in rescue: #{name} (#{name.class})"
+			name
 		end
 	end
 

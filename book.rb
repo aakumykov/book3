@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #coding: UTF-8
-#system 'clear'
+system 'clear'
 
 require 'sqlite3'
 require 'net/http'
@@ -600,9 +600,11 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-book.add_source 'http://opennet.ru'
+#book.add_source 'http://opennet.ru'
 #book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 book.add_source 'https://ru.wikipedia.org'
+book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
 book.page_limit = 2
 
