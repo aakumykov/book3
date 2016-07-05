@@ -389,7 +389,7 @@ class Book
 				image_data = get_image(image_uri)
 				
 				begin
-					File.write(file_path, image_data)
+					File.write(file_path, image_data[:page])
 					img[:src] = file_path
 						Msg::debug " сохранена картинка '#{file_path}'"
 				rescue => e
