@@ -4,11 +4,29 @@ system 'clear'
 
 require 'net/http'
 
-#uri = URI(ARGV[0])
-uri = URI('http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif')
+[ 
+	'http://img5.xuk.ru/images/photos/00/04/27/47/42747/thumb/77a92b43a9db8b95ec8e7458c3af804d.jpg',
+	'http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif',
+	'http://ru.wikipedia.org',
+].each do |uri|
+	puts '-'*50
+	puts uri
+	puts '-'*50
 
-Net::HTTP.start(uri.host, uri.port, use_ssl:('https'==uri.scheme)) { |http|
-	response = http.head(uri)
-	response = response.to_hash
-	response.each_pair { |k,v| puts "#{k} => #{v}" }
-}
+	uri = URI(uri)
+
+	Net::HTTP.start(uri.host, uri.port, use_ssl:('https'==uri.scheme)) { |http|
+		#request = Net::HTTP::Get.new(uri)
+		request = Net::HTTP::Head.new(uri)
+
+		puts "#{request}"
+		puts '-'*50
+		
+		response = http.request(request)
+
+		puts "#{response}"
+		puts '-'*50
+		
+		response.to_hash.each_pair { |k,v| puts "#{k} => #{v}" }
+	}
+end
