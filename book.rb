@@ -241,11 +241,26 @@ class Book
 	end
 
 	# arg = {mode_name: uri}
-	def uri2file_path(arg)
-		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
+	def uri2file_path(*arg)
+		Msg::debug("#{self.class}.#{__method__}()")
 
-		mode = arg.keys.first
-		uri = arg.values.first.strip
+		case arg.size
+		when 1
+			mode = arg.first.keys.first
+			uri = arg.first.values.first
+		when 2
+			mode = arg.first.keys.first
+			uri = arg.first.values.first
+			headers = arg.last
+		else
+			raise ArgumentError, "неверное число аргументов (#{arg.count} вместо 1 или 2)"
+		end
+		
+		uri = uri.strip
+		
+			Msg::debug "mode: #{mode}"
+			Msg::debug "uri: #{uri}"
+			Msg::debug "headers: '#{headers}'(#{headers.class})"
 		
 		case mode
 		when :text
@@ -259,7 +274,6 @@ class Book
 			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
 				ext = ext[:ext]
 			else
-				headers = download(uri: uri, mode: 'headers')
 				if ext=headers.fetch('content-type','').strip.match(/^image\/(?<ext>[a-z]+)$/i) then
 					ext = ext[:ext]
 				else
@@ -350,10 +364,16 @@ class Book
 		end
 		
 		def download(arg)
+			Msg::debug ''
+			Msg::debug("#{__method__}('#{arg[:uri]}', mode: #{arg.fetch(:mode,'')})")
 			
 			uri = URI(arg[:uri])
 			mode = arg[:mode].to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
+			
+				Msg::debug "uri: #{uri}"
+				Msg::debug "mode: #{mode}"
+				Msg::debug "redirects_limit: #{redirects_limit}"
 			
 			if 0==redirects_limit then
 				Msg::warning "слишком много пененаправлений"
@@ -373,6 +393,7 @@ class Book
 
 			case mode
 			when 'headers'
+				Msg::debug "РЕЖИМ СКАЧИВАНИЯ: #{mode}"
 				request = Net::HTTP::Head.new(uri.request_uri)
 			else
 				request = Net::HTTP::Get.new(uri.request_uri)
@@ -395,6 +416,11 @@ class Book
 					redirects_limit: (redirects_limit-1),
 				})
 			when Net::HTTPSuccess then
+				#Msg::debug " result.keys: #{result.keys}"
+			
+				Msg::debug "response: #{response}"
+				Msg::debug "response: #{response.to_hash.keys}"
+			
 				result = {
 					:data => response.body,
 					:headers => response.to_hash,
@@ -404,7 +430,12 @@ class Book
 				return nil
 			end
 
-			return result
+			if 'headers'==mode then
+				Msg::debug "response2: #{response.to_hash.keys}"
+				return result[:headers]
+			else
+				return result
+			end
 		end
 		
 		def load_images(dom)
@@ -413,13 +444,22 @@ class Book
 			dom.search("//img").each { |img|
 				
 				image_uri = repair_uri(img[:src])
-				file_path = @book.uri2file_path(image: image_uri)
+					
+					Msg::debug "image_uri: #{image_uri}"
 				
-				if File.exists?(file_path) then
-					Msg::debug "картинка уже загружена (#{image_uri})"
-				else
-					img[:src] = file_path
-				end
+				download(uri: image_uri, mode:'headers')
+
+				#~ file_path = @book.uri2file_path(image: image_uri)
+				#~ if file_path.nil? then
+					#~ headers = download(uri: image_uri, mode:'headers')
+					#~ file_path = @book.uri2file_path(image: image_uri, headers: headers) 
+				#~ end
+				#~ 
+				#~ if File.exists?(file_path) then
+					#~ Msg::debug "картинка уже загружена (#{image_uri})"
+				#~ else
+					#~ img[:src] = file_path
+				#~ end
 			}
 			
 			return dom
@@ -615,10 +655,11 @@ book.language = 'ru'
 book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
+#book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# глюкалово
 
-book.page_limit = 2
+book.page_limit = 1
 
 book.threads = 1
 

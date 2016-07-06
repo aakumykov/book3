@@ -15,6 +15,8 @@ def download(arg)
 		Msg::warning "слишком много пененаправлений"
 		return nil
 	end
+	
+		puts "request_uri: #{uri.request_uri}"
 
 	begin
 		http = Net::HTTP.start(
@@ -97,15 +99,16 @@ end
 #puts "uri: #{uri}"
 
 [ 
-	'http://img5.xuk.ru/images/photos/00/04/27/47/42747/thumb/77a92b43a9db8b95ec8e7458c3af804d.jpg',
-	'http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif',
-	'http://ru.wikiprgedia.org',
+	#'http://img5.xuk.ru/images/photos/00/04/27/47/42747/thumb/77a92b43a9db8b95ec8e7458c3af804d.jpg',
+	#'http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif',
+	#'http://ru.wikiprgedia.org',
+	'http://top-fwz1.mail.ru/counter2?js=na;id=77689',
 ].each do |uri|
 	# puts '-'*50; puts uri; puts '-'*50
-	data = download(uri: uri)
+	data = download(uri: uri, mode:'headers')
 	
-	# puts "-------------- headers ---------------"
-	# data[:headers].each_pair { |k,v| puts "#{k} => #{v}" }
+	puts "-------------- headers ---------------"
+	data[:headers].each_pair { |k,v| puts "#{k} => #{v}" }
 	
 	# puts "-------------- data ---------------"
 	# puts "data[:data].class: #{data[:data].class}"
