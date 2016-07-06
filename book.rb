@@ -240,9 +240,55 @@ class Book
 		@@db.execute(sql)
 	end
 	
+	def uri2image_name(uri)
+		#Msg::debug "#{__method__}('#{uri}')"
+
+		f_name = uri.match(/(?<name>[-\w.]+)\.(?<ext>[a-z]+)$/i)
+		
+		if not f_name.nil? then
+			name = f_name[:name].strip.downcase
+			ext = f_name[:ext].strip.downcase
+		else
+			#Msg::notice " ссылка без имени файла, запрашиваю HTTP-заголовок"
+			#Msg::notice " #{uri}"
+			
+			uri = URI(uri)
+			
+			begin
+				Net::HTTP.start(uri.host, uri.port, use_ssl:('https'==uri.scheme)) { |http|
+					
+					request = Net::HTTP::Head.new(uri)
+					request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
+					
+					response = http.request(request)
+					response = response.to_hash
+						#response.each_pair { |k,v| Msg::debug "#{k} => #{v}" }
+					
+					content_type = response.fetch('content-type',['']).first
+					
+					ext = content_type.to_s.strip.match(/^image\/(?<ext>[a-z]+)$/i)
+				}
+			rescue => e
+				ext = nil
+			end
+			
+			if not ext.nil? then
+				name = Digest::MD5.hexdigest(uri.to_s)
+				ext = ext[:ext].strip.downcase.gsub('jpeg','jpg')
+			else
+				raise "неизвестный тип файла"
+			end
+		end
+		
+		f_name = name + '.' + ext
+			#Msg::debug " имя файла: #{f_name}"
+		
+		return f_name
+	end
+
 	# arg = {mode_name: uri}
 	def uri2file_path(arg)
-		Msg::debug("#{self.class}.#{__method__}(#{arg})")
+		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
 
 		mode = arg.keys.first
 		uri = arg.values.first
@@ -250,21 +296,16 @@ class Book
 		case mode
 		when :text
 			dir = @text_dir
-			ext = 'html'
+			file_name = Digest::MD5.hexdigest(uri) + '.html'
 		when :image
 			dir = @image_dir
-			ext = uri.match('\.(?<ext>[a-z]+)$')
-			if not ext.nil? then
-				ext = ext[:ext]
-			else
-				raise 'неизвестный тип изображения'
-			end
+			file_name = uri2image_name(uri)
 		else
 			raise "неизвестный режим '#{mode}'"
 		end
 		
-		file_path = File.join(dir, Digest::MD5.hexdigest(uri)+'.'+ext)
-			Msg::debug " file_path: #{file_path}"
+		file_path = File.join(dir, file_name)
+			#Msg::debug " file_path: #{file_path}"
 		
 		return file_path
 	end
@@ -337,7 +378,7 @@ class Book
 		def get_image(uri)
 			#Msg::debug("#{__method__}(#{uri})")
 
-			download_object(uri: uri)
+			res = download_object(uri: uri)
 		end
 		
 		def download_object(arg)
@@ -357,7 +398,7 @@ class Book
 				request = Net::HTTP::Get.new(uri.request_uri)
 				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
 
-				response = http.request request
+				response = http.request(request)
 
 				case response
 				when Net::HTTPRedirection then
@@ -384,30 +425,37 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			dom.search("//img").each { |img|
-				Msg::debug ''
+				#Msg::debug ''
+				
 				image_uri = repair_uri(img[:src])
-				file_path = @book.uri2file_path(image: image_uri)
-				file_name = File.basename(file_path)
-					Msg::debug " image_uri: '#{image_uri}'"
-					Msg::debug " file_name: #{file_name}"
 				
-				if File.exists? file_path then
-					Msg::debug " картинка уже загружена (#{file_name})"
-				else
-					begin
-						image_data = get_image(image_uri)
-						File.write(file_path, image_data[:data])
-							Msg::debug " загружена картинка '#{file_path}'"
-					rescue => e
-						Msg::error e.message
+				begin
+					file_path = @book.uri2file_path(image: image_uri)
+					file_name = File.basename(file_path)
+					
+					if File.exists?(file_path) then
+						#Msg::debug " картинка уже загружена: #{file_name}"
 						file_path = image_uri
+					else
+						begin
+							image_data = get_image(image_uri)
+								#Msg::debug " image_data[:headers]: #{image_data[:headers]}"
+							
+							File.write(file_path, image_data[:data])
+								Msg::debug " сохранена картинка (#{image_data[:headers]['content-length'].first} #{image_data[:headers]['accept-ranges'].first}) '#{file_path}'"
+						rescue => e
+							Msg::warning "#{e.backtrace.first}: #{e.message} (#{image_uri})"
+						end
 					end
+					
+					img[:src] = file_path
+
+				rescue => e
+					Msg::warning "#{e.backtrace.first}: #{e.message} (#{image_uri})"
 				end
-				
-				img[:src] = file_path
 			}
 			
-			dom
+			return dom
 		end
 		
 		def get_title(dom)
@@ -568,6 +616,10 @@ class Msg
 		puts msg
 	end
 	
+	def self.notice(msg)
+		STDERR.puts "#{msg}"
+	end
+	
 	def self.warning(msg)
 		STDERR.puts "ВНИМАНИЕ: #{msg}"
 	end
@@ -593,13 +645,13 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 #book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
-book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
+book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
-book.page_limit = 1
+book.page_limit = 2
 
 book.threads = 1
 
