@@ -4,53 +4,62 @@ system 'clear'
 
 require 'net/http'
 
-def download_object(arg)
+# arg = {mode_name: uri}
+def download(arg)
 	
 	uri = URI(arg[:uri])
-	req_type = arg.fetch(:req_type,:get).to_sym
-	redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
+	mode = arg[:mode].to_s
+	redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 	
-	raise 'слишком много перенаправлений' if 0==redirects_limit
+	if 0==redirects_limit then
+		Msg::warning "слишком много пененаправлений"
+		return nil
+	end
 
-	result = {}
+	begin
+		http = Net::HTTP.start(
+			uri.host, 
+			uri.port, 
+			:use_ssl => ('https'==uri.scheme)
+		)
+	rescue => e
+		Msg::warning "#{e.message} (#{uri.to_s})"
+		return nil
+	end
 
-	Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
+	case mode
+	when 'headers'
+		request = Net::HTTP::Head.new(uri.request_uri)
+	else
+		request = Net::HTTP::Get.new(uri.request_uri)
+	end
 
-		case req_type
-		when :get
-			request = Net::HTTP::Get.new(uri.request_uri)
-		when :head
-			request = Net::HTTP::Head.new(uri.request_uri)
-		else
-			raise "неверный тип запроса '#{req_type}"
-		end
+	#request['User-Agent'] = @book.user_agent
+	request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (admin@kempc.edu.ru)]"
 
-		request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (admin@kempc.edu.ru)]"
 
-		response = http.request(request)
+	response = http.request(request)
 
-		case response
-		when Net::HTTPRedirection then
-			location = response['location']
-			puts "перенаправление на '#{location}'"
-			result =  send(
-				__method__,
-				{ 
-					uri: location, 
-					redirects_limit: (redirects_limit-1),
-					req_type: req_type,
-				}
-			)
-		when Net::HTTPSuccess then
-			result = {
-				:data => response.body,
-				:headers => response.to_hash,
-			}
-		else
-			response.value
-		end
-	}
-  
+	case response
+	when Net::HTTPRedirection then
+		location = response['location']
+			Msg::debug "перенаправление на '#{location}'"
+		
+		result =  send(__method__, {
+			uri: location, 
+			mode: mode,
+			redirects_limit: (redirects_limit-1),
+		})
+	when Net::HTTPSuccess then
+		result = {
+			:data => response.body,
+			:headers => response.to_hash,
+		}
+	else
+		Msg::warning "неприемлемый ответ сервера: '#{response.value}"
+		return nil
+	end
+
 	return result
 end
 
@@ -90,10 +99,14 @@ end
 [ 
 	'http://img5.xuk.ru/images/photos/00/04/27/47/42747/thumb/77a92b43a9db8b95ec8e7458c3af804d.jpg',
 	'http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif',
-	'http://ru.wikipedia.org',
+	'http://ru.wikiprgedia.org',
 ].each do |uri|
-	puts '-'*50; puts uri; puts '-'*50
-	data = download_object(uri: uri, req_type: :head)
-	#puts "-------------- headers ---------------"
-	data[:headers].each_pair { |k,v| puts "#{k} => #{v}" }
+	# puts '-'*50; puts uri; puts '-'*50
+	data = download(uri: uri)
+	
+	# puts "-------------- headers ---------------"
+	# data[:headers].each_pair { |k,v| puts "#{k} => #{v}" }
+	
+	# puts "-------------- data ---------------"
+	# puts "data[:data].class: #{data[:data].class}"
 end
