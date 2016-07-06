@@ -347,7 +347,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			result_page = load_images(result_page)
+			#result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -359,7 +359,7 @@ class Book
 			
 			uri = @current_rule.redirect(uri)
 			
-			data = download_object(uri: uri)
+			data = download(uri: uri)
 			
 			page = recode_page(data[:data], data[:headers])
 				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
@@ -378,46 +378,64 @@ class Book
 		def get_image(uri)
 			#Msg::debug("#{__method__}(#{uri})")
 
-			res = download_object(uri: uri)
+			res = download(uri: uri)
 		end
 		
-		def download_object(arg)
-			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
-
-			#uri = URI.escape(uri) if not uri.urlencoded?
+		def download(arg)
 			
 			uri = URI(arg[:uri])
-			redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
+			mode = arg[:mode].to_s
+			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
+			if 0==redirects_limit then
+				Msg::warning "слишком много пененаправлений"
+				return nil
+			end
 
-			result = {}
+			begin
+				http = Net::HTTP.start(
+					uri.host, 
+					uri.port, 
+					:use_ssl => ('https'==uri.scheme)
+				)
+			rescue => e
+				Msg::warning "#{e.message} (#{uri.to_s})"
+				return nil
+			end
 
-			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
-
+			case mode
+			when 'headers'
+				request = Net::HTTP::Head.new(uri.request_uri)
+			else
 				request = Net::HTTP::Get.new(uri.request_uri)
-				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
+			end
 
-				response = http.request(request)
+			#request['User-Agent'] = @book.user_agent
+			request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (admin@kempc.edu.ru)]"
 
-				case response
-				when Net::HTTPRedirection then
-					location = response['location']
-					puts "перенаправление на '#{location}'"
-					result =  send(
-						__method__,
-						{ :uri => location, :redirects_limit => (redirects_limit-1) }
-					)
-				when Net::HTTPSuccess then
-					result = {
-						:data => response.body,
-						:headers => response.to_hash,
-					}
-				else
-					response.value
-				end
-			}
-		  
+
+			response = http.request(request)
+
+			case response
+			when Net::HTTPRedirection then
+				location = response['location']
+					Msg::debug "перенаправление на '#{location}'"
+				
+				result =  send(__method__, {
+					uri: location, 
+					mode: mode,
+					redirects_limit: (redirects_limit-1),
+				})
+			when Net::HTTPSuccess then
+				result = {
+					:data => response.body,
+					:headers => response.to_hash,
+				}
+			else
+				Msg::warning "неприемлемый ответ сервера: '#{response.value}"
+				return nil
+			end
+
 			return result
 		end
 		
