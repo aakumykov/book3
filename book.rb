@@ -239,71 +239,39 @@ class Book
 		
 		@@db.execute(sql)
 	end
-	
-	def uri2image_name(uri)
-		#Msg::debug "#{__method__}('#{uri}')"
-
-		f_name = uri.match(/(?<name>[-\w.]+)\.(?<ext>[a-z]+)$/i)
-		
-		if not f_name.nil? then
-			name = f_name[:name].strip.downcase
-			ext = f_name[:ext].strip.downcase
-		else
-			#Msg::notice " ссылка без имени файла, запрашиваю HTTP-заголовок"
-			#Msg::notice " #{uri}"
-			
-			uri = URI(uri)
-			
-			begin
-				Net::HTTP.start(uri.host, uri.port, use_ssl:('https'==uri.scheme)) { |http|
-					
-					request = Net::HTTP::Head.new(uri)
-					request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
-					
-					response = http.request(request)
-					response = response.to_hash
-						#response.each_pair { |k,v| Msg::debug "#{k} => #{v}" }
-					
-					content_type = response.fetch('content-type',['']).first
-					
-					ext = content_type.to_s.strip.match(/^image\/(?<ext>[a-z]+)$/i)
-				}
-			rescue => e
-				ext = nil
-			end
-			
-			if not ext.nil? then
-				name = Digest::MD5.hexdigest(uri.to_s)
-				ext = ext[:ext].strip.downcase.gsub('jpeg','jpg')
-			else
-				raise "неизвестный тип файла"
-			end
-		end
-		
-		f_name = name + '.' + ext
-			#Msg::debug " имя файла: #{f_name}"
-		
-		return f_name
-	end
 
 	# arg = {mode_name: uri}
 	def uri2file_path(arg)
 		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
 
 		mode = arg.keys.first
-		uri = arg.values.first
+		uri = arg.values.first.strip
 		
 		case mode
 		when :text
 			dir = @text_dir
-			file_name = Digest::MD5.hexdigest(uri) + '.html'
+			name = uri
+			ext = 'html'
 		when :image
 			dir = @image_dir
-			file_name = uri2image_name(uri)
+			name = uri
+			
+			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
+				ext = ext[:ext]
+			else
+				headers = download(uri: uri, mode: 'headers')
+				if ext=headers.fetch('content-type','').strip.match(/^image\/(?<ext>[a-z]+)$/i) then
+					ext = ext[:ext]
+				else
+					Msg::warning "не удалось определить тип файла (#{uri})"
+					return nil
+				end
+			end
 		else
 			raise "неизвестный режим '#{mode}'"
 		end
 		
+		file_name = Digest::MD5.hexdigest(name) + '.' + ext.downcase
 		file_path = File.join(dir, file_name)
 			#Msg::debug " file_path: #{file_path}"
 		
@@ -347,7 +315,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			#result_page = load_images(result_page)
+			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -443,33 +411,14 @@ class Book
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 			dom.search("//img").each { |img|
-				#Msg::debug ''
 				
 				image_uri = repair_uri(img[:src])
+				file_path = @book.uri2file_path(image: image_uri)
 				
-				begin
-					file_path = @book.uri2file_path(image: image_uri)
-					file_name = File.basename(file_path)
-					
-					if File.exists?(file_path) then
-						#Msg::debug " картинка уже загружена: #{file_name}"
-						file_path = image_uri
-					else
-						begin
-							image_data = get_image(image_uri)
-								#Msg::debug " image_data[:headers]: #{image_data[:headers]}"
-							
-							File.write(file_path, image_data[:data])
-								Msg::debug " сохранена картинка (#{image_data[:headers]['content-length'].first} #{image_data[:headers]['accept-ranges'].first}) '#{file_path}'"
-						rescue => e
-							Msg::warning "#{e.backtrace.first}: #{e.message} (#{image_uri})"
-						end
-					end
-					
+				if File.exists?(file_path) then
+					Msg::debug "картинка уже загружена (#{image_uri})"
+				else
 					img[:src] = file_path
-
-				rescue => e
-					Msg::warning "#{e.backtrace.first}: #{e.message} (#{image_uri})"
 				end
 			}
 			
