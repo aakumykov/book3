@@ -34,7 +34,7 @@ class DefaultSite
 			uri
 		else
 			new_uri = @current_rule[:redirect].call(uri)
-				Msg::debug " программное перенаправлние на '#{new_uri}'"
+				Msg::notice " программное перенаправлние на '#{new_uri}'"
 			new_uri
 		end
 	end

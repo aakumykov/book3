@@ -6,6 +6,7 @@ require 'sqlite3'
 require 'net/http'
 require 'nokogiri'
 require 'securerandom'
+require 'colorize'
 
 class Book
 	# пользовательское
@@ -365,7 +366,7 @@ class Book
 		
 		def download(arg)
 			Msg::debug ''
-			Msg::debug("#{__method__}('#{arg[:uri]}', mode: #{arg.fetch(:mode,'')})")
+			Msg::info("#{__method__}('#{arg[:uri]}', mode: #{arg.fetch(:mode,'')})")
 			
 			uri = URI(arg[:uri])
 			mode = arg[:mode].to_s
@@ -408,7 +409,7 @@ class Book
 			case response
 			when Net::HTTPRedirection then
 				location = response['location']
-					Msg::debug "перенаправление на '#{location}'"
+					Msg::notice "перенаправление на '#{location}'"
 				
 				result =  send(__method__, {
 					uri: location, 
@@ -489,7 +490,7 @@ class Book
 				begin
 					[lnk, repair_uri(lnk)]
 				rescue => e
-					Msg::warning "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
+					Msg::notice "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
 				end
 			}.compact.to_h
@@ -615,24 +616,25 @@ class Msg
 	#~ end
 	
 	def self.debug(msg, params={})
+		#msg = msg.white.on_light_white
 		params.fetch(:nobr,false) ? print(msg) : puts(msg)
 		#puts "#{msg}, nobr: #{params.fetch(:nobr,false)}"
 	end
 	
 	def self.info(msg)
-		puts msg
+		puts msg.blue
 	end
 	
 	def self.notice(msg)
-		STDERR.puts "#{msg}"
+		STDERR.puts "#{msg}".light_red
 	end
 	
 	def self.warning(msg)
-		STDERR.puts "ВНИМАНИЕ: #{msg}"
+		STDERR.puts "ВНИМАНИЕ: #{msg}".red
 	end
 	
 	def self.error(msg)
-		STDERR.puts "ОШИБКА: #{msg}"
+		STDERR.puts "ОШИБКА: #{msg}".black.on_red
 	end
 end
 
