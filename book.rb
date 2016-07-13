@@ -448,17 +448,19 @@ class Book
 					#Msg::debug "image_data[:headers]: #{image_data[:headers]}"
 
 				file_path = @book.uri2file_path(image: image_uri, headers: image_data[:headers])
-					Msg::debug "file_path: #{file_path}"
+					#Msg::debug "file_path: #{file_path}"
+					
+				if nil==file_path then
+					Msg::warning "не удалось загрузить изображение '#{image_uri}'"
+					next
+				end
 				
-				#~ if file_path.nil? then
-					#~ file_path = @book.uri2file_path(image: image_uri, headers: headers) 
-				#~ end
-				#~ 
-				#~ if File.exists?(file_path) then
-					#~ Msg::debug "картинка уже загружена (#{image_uri})"
-				#~ else
-					#~ img[:src] = file_path
-				#~ end
+				if File.exists?(file_path) then
+					Msg::debug "картинка уже загружена (#{image_uri})"
+				else
+					File.write(file_path, image_data[:data])
+					img[:src] = file_path
+				end
 			}
 			
 			return dom
