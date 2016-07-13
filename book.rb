@@ -243,7 +243,7 @@ class Book
 
 	# arg = {mode_name: uri}
 	def uri2file_path(*arg)
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 
 		case arg.size
 		when 1
@@ -259,10 +259,6 @@ class Book
 		
 		uri = uri.strip
 		
-			Msg::debug "mode: #{mode}"
-			Msg::debug "uri: #{uri}"
-			Msg::debug "headers: '#{headers}'(#{headers.class})"
-		
 		case mode
 		when :text
 			dir = @text_dir
@@ -271,6 +267,10 @@ class Book
 		when :image
 			dir = @image_dir
 			name = uri
+			
+				Msg::debug " mode: #{mode}"
+				Msg::debug " uri: #{uri}"
+				Msg::debug " headers: '#{headers}'(#{headers.class})"
 			
 			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
 				ext = ext[:ext]
@@ -288,6 +288,7 @@ class Book
 		
 		file_name = Digest::MD5.hexdigest(name) + '.' + ext.downcase
 		file_path = File.join(dir, file_name)
+			
 			#Msg::debug " file_path: #{file_path}"
 		
 		return file_path
@@ -366,18 +367,19 @@ class Book
 		
 		def download(arg)
 			Msg::debug ''
-			Msg::info("#{__method__}('#{arg[:uri]}', mode: #{arg.fetch(:mode,'')})")
 			
 			uri = URI(arg[:uri])
-			mode = arg[:mode].to_s
+			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-				Msg::debug "uri: #{uri}"
-				Msg::debug "mode: #{mode}"
-				Msg::debug "redirects_limit: #{redirects_limit}"
+			Msg::info("#{__method__}('#{uri}', mode: #{mode})")
+			
+				#Msg::debug " uri: #{uri}"
+				#Msg::debug " mode: #{mode}"
+				#Msg::debug " redirects_limit: #{redirects_limit}"
 			
 			if 0==redirects_limit then
-				Msg::warning "слишком много пененаправлений"
+				Msg::warning " слишком много пененаправлений"
 				return nil
 			end
 
@@ -409,7 +411,7 @@ class Book
 			case response
 			when Net::HTTPRedirection then
 				location = response['location']
-					Msg::notice "перенаправление на '#{location}'"
+					Msg::notice " перенаправление на '#{location}'"
 				
 				result =  send(__method__, {
 					uri: location, 
@@ -419,20 +421,20 @@ class Book
 			when Net::HTTPSuccess then
 				#Msg::debug " result.keys: #{result.keys}"
 			
-				Msg::debug "response: #{response}"
-				Msg::debug "response: #{response.to_hash.keys}"
+				#Msg::debug " response: #{response}"
+				#Msg::debug " response: #{response.to_hash.keys}"
 			
 				result = {
 					:data => response.body,
 					:headers => response.to_hash,
 				}
 			else
-				Msg::warning "неприемлемый ответ сервера: '#{response.value}"
+				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
 				return nil
 			end
 
 			if 'headers'==mode then
-				Msg::debug "response2: #{response.to_hash.keys}"
+				Msg::debug " response2: #{response.to_hash.keys}"
 				return result[:headers]
 			else
 				return result
@@ -653,13 +655,13 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-#book.add_source 'http://opennet.ru'
+book.add_source 'http://opennet.ru'
 #book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
 #book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
 
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
