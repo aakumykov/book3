@@ -652,12 +652,14 @@ book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
 #book.add_source 'http://opennet.ru'
-book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
+#book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
+
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
-#book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# глюкалово
+
 
 book.page_limit = 1
 
