@@ -8,8 +8,12 @@ require 'net/http'
 def download(arg)
 	
 	uri = URI(arg[:uri])
-	mode = arg[:mode].to_s
+	mode = arg.fetch(:mode,:full).to_s
 	redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
+	
+		Msg::info "uri: #{uri}"
+		Msg::info "mode: #{mode}"
+		Msg::info "redirects_limit: #{redirects_limit}"
 	
 	if 0==redirects_limit then
 		Msg::warning "слишком много пененаправлений"
@@ -53,6 +57,9 @@ def download(arg)
 			redirects_limit: (redirects_limit-1),
 		})
 	when Net::HTTPSuccess then
+		Msg::debug "response headers: #{response.class}"
+		Msg::debug "response body: #{response.body.class} (size: #{response.body.size})"
+	
 		result = {
 			:data => response.body,
 			:headers => response.to_hash,
@@ -101,12 +108,14 @@ end
 [ 
 	#'http://img5.xuk.ru/images/photos/00/04/27/47/42747/thumb/77a92b43a9db8b95ec8e7458c3af804d.jpg',
 	#'http://www.gravatar.com/avatar/3f1d7c78410432ecfed554f14c5c8fc7?size=40&d=http%3A%2F%2Fwww.opennet.ru%2Fp.gif',
-	#'http://ru.wikiprgedia.org',
+	#'https://ru.wikipedia.org',
+	#'http://opennet.ru',
 	'http://top-fwz1.mail.ru/counter2?js=na;id=77689',
 ].each do |uri|
 	# puts '-'*50; puts uri; puts '-'*50
-	data = download(uri: uri, mode:'headers')
+	data = download(uri: uri)
 	
+	puts ''
 	puts "-------------- headers ---------------"
 	data[:headers].each_pair { |k,v| puts "#{k} => #{v}" }
 	

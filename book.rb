@@ -220,7 +220,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		Msg::debug("#{self.class}.#{__method__}()")
+		Msg::debug("#{self.class}.#{__method__}(#{params})")
 		
 		condition = params[:where]
 		data = params[:set]
@@ -360,19 +360,19 @@ class Book
 		end
 		
 		def get_image(uri)
-			#Msg::debug("#{__method__}(#{uri})")
+			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 
 			res = download(uri: uri)
 		end
 		
 		def download(arg)
-			Msg::debug ''
+			#Msg::debug ''
 			
 			uri = URI(arg[:uri])
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			Msg::info("#{__method__}('#{uri}', mode: #{mode})")
+			Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 				#Msg::debug " uri: #{uri}"
 				#Msg::debug " mode: #{mode}"
@@ -396,7 +396,7 @@ class Book
 
 			case mode
 			when 'headers'
-				Msg::debug "РЕЖИМ СКАЧИВАНИЯ: #{mode}"
+				#Msg::debug "РЕЖИМ СКАЧИВАНИЯ: #{mode}"
 				request = Net::HTTP::Head.new(uri.request_uri)
 			else
 				request = Net::HTTP::Get.new(uri.request_uri)
@@ -420,7 +420,6 @@ class Book
 				})
 			when Net::HTTPSuccess then
 				#Msg::debug " result.keys: #{result.keys}"
-			
 				#Msg::debug " response: #{response}"
 				#Msg::debug " response: #{response.to_hash.keys}"
 			
@@ -434,7 +433,9 @@ class Book
 			end
 
 			if 'headers'==mode then
-				Msg::debug " response2: #{response.to_hash.keys}"
+				
+					#Msg::debug " response2: #{response.to_hash.keys}"
+				
 				return result[:headers]
 			else
 				return result
@@ -448,9 +449,9 @@ class Book
 				
 				image_uri = repair_uri(img[:src])
 					
-					Msg::debug "image_uri: #{image_uri}"
+					#Msg::debug " image_uri: #{image_uri}"
 				
-				download(uri: image_uri, mode:'headers')
+				image_data = download(uri: image_uri)
 
 				#~ file_path = @book.uri2file_path(image: image_uri)
 				#~ if file_path.nil? then
@@ -483,9 +484,9 @@ class Book
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
 				
-				Msg::debug " ссылок до уникализации #{links.count}"
+				Msg::debug " всего ссылок: #{links.count}"
 			links = links.uniq
-				Msg::debug " ссылок после уникализации #{links.count}"
+				Msg::debug " уникальных: #{links.count}"
 			
 			links_hash = links.map { |lnk| 
 				#Msg::debug "lnk: #{lnk}"
@@ -497,13 +498,13 @@ class Book
 				end
 			}.compact.to_h
 			
-				Msg::debug(" собрано ссылок: #{links_hash.count}")
+				Msg::debug(" восстановленно: #{links_hash.count}")
 			
 			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
 				@current_rule.accept_link?(lnk_full) 
 			}
 			
-				Msg::debug(" оставлено ссылок: #{links_hash.count}")
+				Msg::debug(" оставлено: #{links_hash.count}")
 			
 			links_hash.each_pair { |lnk_orig,lnk_full| 
 				@book.link_add(@current_id, lnk_full) 
@@ -513,7 +514,7 @@ class Book
 		end
 		
 		def make_links_offline(links_hash, page)
-			Msg::debug("#{__method__}()")
+			Msg::debug("#{self.class}.#{__method__}()")
 			
 			page.search("//a").map { |a|
 				links_hash.each_pair { |lnk_orig,lnk_full|
@@ -529,6 +530,8 @@ class Book
 		end
 
 		def recode_page(page, headers, target_charset='UTF-8')
+			Msg::debug("#{self.class}.#{__method__}()")
+			
 			page_charset = nil
 			headers_charset = nil
 			
@@ -601,7 +604,7 @@ class Book
 </html>
 MARKUP
 			
-			File::write(@file_path, html) and Msg::debug "записан файл #{@file_name}"
+			File::write(@file_path, html) and Msg::debug " записан файл #{@file_name}"
 			
 			@book.link_update(
 				set: {title: @title, file: @file_name}, 
