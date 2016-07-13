@@ -242,20 +242,12 @@ class Book
 	end
 
 	# arg = {mode_name: uri}
-	def uri2file_path(*arg)
+	def uri2file_path(arg={})
 		#Msg::debug("#{self.class}.#{__method__}()")
 
-		case arg.size
-		when 1
-			mode = arg.first.keys.first
-			uri = arg.first.values.first
-		when 2
-			mode = arg.first.keys.first
-			uri = arg.first.values.first
-			headers = arg.last
-		else
-			raise ArgumentError, "неверное число аргументов (#{arg.count} вместо 1 или 2)"
-		end
+		mode = arg.keys.first
+		uri = arg.values.first
+		headers = arg[:headers] if 2==arg.size
 		
 		uri = uri.strip
 		
@@ -267,15 +259,16 @@ class Book
 		when :image
 			dir = @image_dir
 			name = uri
-			
-				Msg::debug " mode: #{mode}"
-				Msg::debug " uri: #{uri}"
-				Msg::debug " headers: '#{headers}'(#{headers.class})"
+				
+				#~ Msg::debug("#{self.class}.#{__method__}()")
+				#~ Msg::debug " mode: #{mode}"
+				#~ Msg::debug " uri: #{uri}"
+				#~ Msg::debug " headers: '#{headers}'(#{headers.class})"
 			
 			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
 				ext = ext[:ext]
 			else
-				if ext=headers.fetch('content-type','').strip.match(/^image\/(?<ext>[a-z]+)$/i) then
+				if ext=headers.fetch('content-type','').first.strip.match(/^image\/(?<ext>[a-z]+)$/i) then
 					ext = ext[:ext]
 				else
 					Msg::warning "не удалось определить тип файла (#{uri})"
@@ -452,10 +445,12 @@ class Book
 					#Msg::debug " image_uri: #{image_uri}"
 				
 				image_data = download(uri: image_uri)
+					#Msg::debug "image_data[:headers]: #{image_data[:headers]}"
 
-				#~ file_path = @book.uri2file_path(image: image_uri)
+				file_path = @book.uri2file_path(image: image_uri, headers: image_data[:headers])
+					Msg::debug "file_path: #{file_path}"
+				
 				#~ if file_path.nil? then
-					#~ headers = download(uri: image_uri, mode:'headers')
 					#~ file_path = @book.uri2file_path(image: image_uri, headers: headers) 
 				#~ end
 				#~ 
