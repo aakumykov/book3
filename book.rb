@@ -141,7 +141,7 @@ class Book
 					@page_count += 1
 				rescue => e
 					@error_count += 1
-					Msg::error e.message
+					Msg::error e.class, e.message, e.backtrace
 				end
 			}
 		end
@@ -220,7 +220,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		Msg::debug("#{self.class}.#{__method__}(#{params})")
+		#Msg::debug("#{self.class}.#{__method__}(#{params})")
 		
 		condition = params[:where]
 		data = params[:set]
@@ -391,26 +391,22 @@ class Book
 					redirects_limit: (redirects_limit-1),
 				})
 			when Net::HTTPSuccess then
-				#Msg::debug " result.keys: #{result.keys}"
-				#Msg::debug " response: #{response}"
-				#Msg::debug " response: #{response.to_hash.keys}"
+				
+					#Msg::debug "response keys: #{response.to_hash.keys}"
 			
 				result = {
-					:data => response.body,
+					:data => response.body.to_s,
 					:headers => response.to_hash,
 				}
+				
+				if 'headers'==mode then
+					return result[:headers]
+				else
+					return result
+				end
 			else
 				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
 				return nil
-			end
-
-			if 'headers'==mode then
-				
-					#Msg::debug " response2: #{response.to_hash.keys}"
-				
-				return result[:headers]
-			else
-				return result
 			end
 		end
 		
@@ -423,13 +419,15 @@ class Book
 				
 				# определяю имя файла для картинки
 				begin
+					# сначала по URI
 					file_path = @book.uri2file_path(image: uri)
-				rescue => e
+				rescue
 					begin
+						# если не вышло, с привлечением заголовков
 						headers = download(uri: uri, mode: 'headers')
 						file_path = @book.uri2file_path(image: uri, headers: headers)
 					rescue => e
-						Msg::warning "не удалось получить имя файла для картинки '#{uri}'", e.backtrace
+						Msg::warning "не удалось получить имя файла для картинки '#{uri}'", e
 						next
 					end
 				end
@@ -606,7 +604,7 @@ MARKUP
 	end
 	
 	def headers2ext(headers)
-		Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+		#Msg::debug("#{self.class}.#{__method__}(#{headers.keys})")
 		
 		content_type = headers.fetch('content-type').first.strip.downcase
 		
@@ -633,7 +631,7 @@ class Msg
 	end
 	
 	def self.notice(msg)
-		STDERR.puts "#{msg}".light_red
+		STDERR.puts "#{msg}".cyan
 	end
 	
 	def self.warning(*msg)
