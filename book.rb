@@ -243,13 +243,8 @@ class Book
 
 	# arg = {mode_name: uri}
 	def uri2file_path(arg={})
-		#Msg::debug("#{self.class}.#{__method__}()")
-
 		mode = arg.keys.first
 		uri = arg.values.first
-		headers = arg[:headers] if 2==arg.size
-		
-		uri = uri.strip
 		
 		case mode
 		when :text
@@ -259,24 +254,13 @@ class Book
 		when :image
 			dir = @image_dir
 			name = uri
-				
-				#~ Msg::debug("#{self.class}.#{__method__}()")
-				#~ Msg::debug " mode: #{mode}"
-				#~ Msg::debug " uri: #{uri}"
-				#~ Msg::debug " headers: '#{headers}'(#{headers.class})"
-			
-			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
-				ext = ext[:ext]
+			if arg.has_key?(:headers) then
+				ext = headers2ext(arg[:headers])
 			else
-				if ext=headers.fetch('content-type',['']).first.strip.match(/^image\/(?<ext>[a-z]+)$/i) then
-					ext = ext[:ext]
-				else
-					Msg::warning "не удалось определить тип файла (#{uri})"
-					return nil
-				end
+				ext=uri.match(/\.(?<ext>[a-z]+)$/i)[:ext]
 			end
 		else
-			raise "неизвестный режим '#{mode}'"
+			raise ArgumentError "неизвестный режим '#{mode}'"
 		end
 		
 		file_name = Digest::MD5.hexdigest(name) + '.' + ext.downcase
@@ -324,7 +308,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			#result_page = load_images(result_page)
+			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -437,17 +421,22 @@ class Book
 				
 				uri = repair_uri(img[:src])
 				
-				# определяю имя файла для картинки (с возможным http-подзапросом)
+				# определяю имя файла для картинки
 				begin
-					file_path = uri2file_path(image: uri)
+					file_path = @book.uri2file_path(image: uri)
 				rescue => e
-					 Msg::warning "не удалось получить имя файла для картинки '#{uri}' (#{e.message})"
-					 next
+					begin
+						headers = download(uri: uri, mode: 'headers')
+						file_path = @book.uri2file_path(image: uri, headers: headers)
+					rescue => e
+						Msg::warning "не удалось получить имя файла для картинки '#{uri}'", e.backtrace
+						next
+					end
 				end
 				
 				# проверяю, загружено ли уже
 				if File.exists?(file_path) then
-					Msg::notice "картинка '#{uri}' уже загружена '#{file_path}'"
+					Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
 					next
 				end
 				
@@ -615,6 +604,16 @@ MARKUP
 			)
 		end
 	end
+	
+	def headers2ext(headers)
+		Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+		
+		content_type = headers.fetch('content-type').first.strip.downcase
+		
+		ext = content_type.match(/^(?<type>[a-z]+)\/(?<ext>[a-z]+)$/i)[:ext].strip.downcase
+	end
+	
+	
 end
 
 
@@ -637,8 +636,11 @@ class Msg
 		STDERR.puts "#{msg}".light_red
 	end
 	
-	def self.warning(msg)
-		STDERR.puts "ВНИМАНИЕ: #{msg}".red
+	def self.warning(*msg)
+		STDERR.puts "ВНИМАНИЕ:".red
+		msg.flatten.each {|m|
+			STDERR.puts m.to_s.red
+		}
 	end
 	
 	def self.error(msg)
