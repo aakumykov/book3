@@ -268,7 +268,7 @@ class Book
 			if ext=uri.match(/\.(?<ext>[a-z]+)$/i) then
 				ext = ext[:ext]
 			else
-				if ext=headers.fetch('content-type','').first.strip.match(/^image\/(?<ext>[a-z]+)$/i) then
+				if ext=headers.fetch('content-type',['']).first.strip.match(/^image\/(?<ext>[a-z]+)$/i) then
 					ext = ext[:ext]
 				else
 					Msg::warning "не удалось определить тип файла (#{uri})"
