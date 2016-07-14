@@ -638,13 +638,29 @@ class Msg
 	
 	def self.warning(*msg)
 		STDERR.puts "ВНИМАНИЕ:".red
-		msg.flatten.each {|m|
+		self.prepare_msg(msg).each {|m|
 			STDERR.puts m.to_s.red
 		}
 	end
 	
-	def self.error(msg)
-		STDERR.puts "ОШИБКА: #{msg}".black.on_red
+	def self.error(*msg)
+		STDERR.puts "ОШИБКА:".black.on_red
+		self.prepare_msg(msg).each {|m|
+			STDERR.puts m.to_s.black.on_red
+		}
+	end
+	
+	private
+	
+	def self.prepare_msg(*msg)
+		msg = msg.flatten.map {|m|
+			if m.kind_of? Exception then
+				[m.message, m.backtrace]
+			else
+				m
+			end
+		}
+		msg.flatten
 	end
 end
 
@@ -655,7 +671,6 @@ class String
 		return false
 	end
 end
-
 
 book = Book.new
 
