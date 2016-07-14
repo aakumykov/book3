@@ -132,17 +132,17 @@ class Book
 			end
 			
 			threads.each { |thr| 
-				#begin
+				begin
 					id = thr.value
 					link_update(
 						set: { status: 'processed' },
 						where: { id: id }
 					)
 					@page_count += 1
-				#~ rescue => e
-					#~ @error_count += 1
-					#~ Msg::error e.message
-				#~ end
+				rescue => e
+					@error_count += 1
+					Msg::error e.message
+				end
 			}
 		end
 		
@@ -324,7 +324,7 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
-			result_page = load_images(result_page)
+			#result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -376,16 +376,11 @@ class Book
 				return nil
 			end
 
-			begin
-				http = Net::HTTP.start(
-					uri.host, 
-					uri.port, 
-					:use_ssl => ('https'==uri.scheme)
-				)
-			rescue => e
-				Msg::warning "#{e.message} (#{uri.to_s})"
-				return nil
-			end
+			http = Net::HTTP.start(
+				uri.host, 
+				uri.port, 
+				:use_ssl => ('https'==uri.scheme)
+			)
 
 			case mode
 			when 'headers'
@@ -440,26 +435,37 @@ class Book
 			
 			dom.search("//img").each { |img|
 				
-				image_uri = repair_uri(img[:src])
-					
-					#Msg::debug " image_uri: #{image_uri}"
+				uri = repair_uri(img[:src])
 				
-				image_data = download(uri: image_uri)
-					#Msg::debug "image_data[:headers]: #{image_data[:headers]}"
-
-				file_path = @book.uri2file_path(image: image_uri, headers: image_data[:headers])
-					#Msg::debug "file_path: #{file_path}"
-					
-				if nil==file_path then
-					Msg::warning "не удалось загрузить изображение '#{image_uri}'"
+				# определяю имя файла для картинки (с возможным http-подзапросом)
+				begin
+					file_path = uri2file_path(image: uri)
+				rescue => e
+					 Msg::warning "не удалось получить имя файла для картинки '#{uri}' (#{e.message})"
+					 next
+				end
+				
+				# проверяю, загружено ли уже
+				if File.exists?(file_path) then
+					Msg::notice "картинка '#{uri}' уже загружена '#{file_path}'"
 					next
 				end
 				
-				if File.exists?(file_path) then
-					Msg::debug "картинка уже загружена (#{image_uri})"
-				else
-					File.write(file_path, image_data[:data])
+				# скачиваю картинку
+				begin
+					data = download(uri: uri)
+				rescue => e
+					Msg::warning "не удалось загрузить картинку '#{uri}' (#{e.message})"
+					next
+				end
+				
+				# сохраняю картинку в файл
+				begin
+					File.write(file_path, data[:data])
 					img[:src] = file_path
+				rescue => e
+					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
+					next
 				end
 			}
 			
