@@ -417,6 +417,11 @@ class Book
 				
 				uri = repair_uri(img[:src])
 				
+				if ! @current_rule.accept_image?(uri) then
+					Msg::notice "отбрасываю картинку '#{uri}'"
+					next
+				end
+				
 				# определяю имя файла для картинки
 				begin
 					# сначала по URI
@@ -676,8 +681,8 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
+#book.add_source 'http://opennet.ru'
+book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
 #book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
 
 #book.add_source 'https://ru.wikipedia.org'

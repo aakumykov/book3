@@ -9,6 +9,13 @@ class DefaultSite
 		'^.+$' => :AnyPage,
 	}
 	
+	@@image_blacklist = [
+		'//top\.mail\.ru',
+		'//top-[^.]+\.mail\.ru',
+		'//counter\.rambler\.ru',
+		'//[^.]+\.gravatar\.com',
+	]
+	
 	def initialize(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
@@ -16,6 +23,11 @@ class DefaultSite
 			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
 	
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
+		
+		#@@image_blacklist = ''
+		
+		@@image_blacklist = Regexp.union( @@image_blacklist.map{|pattern| Regexp.new(pattern)} )
+			Msg::debug "IMAGE BLACKLIST: #{@@image_blacklist}"
 	end
 
 	def accept_link?(uri)
@@ -43,6 +55,9 @@ class DefaultSite
 		self.send(@current_rule[:processor], page)
 	end
 
+	def accept_image?(src)
+		! src.to_s.strip.match(@@image_blacklist)
+	end
 
 	private
 
