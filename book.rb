@@ -6,6 +6,7 @@ require 'sqlite3'
 require 'net/http'
 require 'nokogiri'
 require 'securerandom'
+require 'colorize'
 
 class Book
 	# пользовательское
@@ -76,10 +77,10 @@ class Book
 			Dir.mkdir(@text_dir) or raise "невозможно создать каталог #{@text_dir}"
 		end
 		
-		@images_dir = File.join(@@work_dir,'images')
+		@image_dir = File.join(@@work_dir,'images')
 		
-		if not Dir.exists?(@images_dir) then
-			Dir.mkdir(@images_dir) or raise "невозможно создать каталог #{@images_dir}"
+		if not Dir.exists?(@image_dir) then
+			Dir.mkdir(@image_dir) or raise "невозможно создать каталог #{@image_dir}"
 		end
 	end
 
@@ -131,17 +132,17 @@ class Book
 			end
 			
 			threads.each { |thr| 
-				#begin
+				begin
 					id = thr.value
 					link_update(
 						set: { status: 'processed' },
 						where: { id: id }
 					)
 					@page_count += 1
-				#~ rescue => e
-					#~ @error_count += 1
-					#~ Msg::error e.message
-				#~ end
+				rescue => e
+					@error_count += 1
+					Msg::error e.class, e.message, e.backtrace
+				end
 			}
 		end
 		
@@ -184,7 +185,7 @@ class Book
 	end
 
 	def get_rule(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		require "./#{@@rules_dir}/default.rb" if not Object.const_defined? :DefaultSite
 		
@@ -219,7 +220,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}(#{params})")
 		
 		condition = params[:where]
 		data = params[:set]
@@ -239,11 +240,32 @@ class Book
 		
 		@@db.execute(sql)
 	end
-	
-	def uri2file_path(uri)
-		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+
+	# arg = {mode_name: uri}
+	def uri2file_path(arg={})
+		mode = arg.keys.first
+		uri = arg.values.first
 		
-		file_path = File.join(@text_dir, Digest::MD5.hexdigest(uri)+'.html')
+		case mode
+		when :text
+			dir = @text_dir
+			name = uri
+			ext = 'html'
+		when :image
+			dir = @image_dir
+			name = uri
+			if arg.has_key?(:headers) then
+				ext = headers2ext(arg[:headers])
+			else
+				ext=uri.match(/\.(?<ext>[a-z]+)$/i)[:ext]
+			end
+		else
+			raise ArgumentError "неизвестный режим '#{mode}'"
+		end
+		
+		file_name = Digest::MD5.hexdigest(name) + '.' + ext.downcase
+		file_path = File.join(dir, file_name)
+			
 			#Msg::debug " file_path: #{file_path}"
 		
 		return file_path
@@ -255,7 +277,7 @@ class Book
 	class Processor
 		
 		def initialize(book, id, uri)
-			Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
+			#Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
 			
 			the_uri = URI(uri)
 			
@@ -266,9 +288,9 @@ class Book
 			@current_host = the_uri.host
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
-				Msg::debug " @current_rule: #{@current_rule}"
+				#Msg::debug " @current_rule: #{@current_rule}"
 			
-			@file_path = @book.uri2file_path(@current_uri)
+			@file_path = @book.uri2file_path(text: @current_uri)
 			@file_name = File.basename(@file_path)
 
 				#Msg::debug(" rule: #{@current_rule.class}")
@@ -283,7 +305,10 @@ class Book
 			result_page = @current_rule.process_page(@page)
 				
 			links_hash = collect_links(result_page)
+			
 			result_page = make_links_offline(links_hash, result_page)
+			
+			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
 			
@@ -295,10 +320,9 @@ class Book
 			
 			uri = @current_rule.redirect(uri)
 			
-			data = load_page(uri: uri)
-				#File.write('page1.html', data[:page])
+			data = download(uri: uri)
 			
-			page = recode_page(data[:page], data[:headers])
+			page = recode_page(data[:data], data[:headers])
 				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
 				#File.write('page2.html', page)
 			
@@ -312,8 +336,131 @@ class Book
 			page
 		end
 		
-		def get_title(dom)
+		def get_image(uri)
+			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+
+			res = download(uri: uri)
+		end
+		
+		def download(arg)
+			#Msg::debug ''
+			
+			uri = URI(arg[:uri])
+			mode = arg.fetch(:mode,:full).to_s
+			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
+			
+			Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
+			
+				#Msg::debug " uri: #{uri}"
+				#Msg::debug " mode: #{mode}"
+				#Msg::debug " redirects_limit: #{redirects_limit}"
+			
+			if 0==redirects_limit then
+				Msg::warning " слишком много пененаправлений"
+				return nil
+			end
+
+			http = Net::HTTP.start(
+				uri.host, 
+				uri.port, 
+				:use_ssl => ('https'==uri.scheme)
+			)
+
+			case mode
+			when 'headers'
+				#Msg::debug "РЕЖИМ СКАЧИВАНИЯ: #{mode}"
+				request = Net::HTTP::Head.new(uri.request_uri)
+			else
+				request = Net::HTTP::Get.new(uri.request_uri)
+			end
+
+			#request['User-Agent'] = @book.user_agent
+			request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (admin@kempc.edu.ru)]"
+
+
+			response = http.request(request)
+
+			case response
+			when Net::HTTPRedirection then
+				location = response['location']
+					Msg::notice " перенаправление на '#{location}'"
+				
+				result =  send(__method__, {
+					uri: location, 
+					mode: mode,
+					redirects_limit: (redirects_limit-1),
+				})
+			when Net::HTTPSuccess then
+				
+					#Msg::debug "response keys: #{response.to_hash.keys}"
+			
+				result = {
+					:data => response.body.to_s,
+					:headers => response.to_hash,
+				}
+				
+				if 'headers'==mode then
+					return result[:headers]
+				else
+					return result
+				end
+			else
+				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
+				return nil
+			end
+		end
+		
+		def load_images(dom)
 			Msg::debug("#{self.class}.#{__method__}()")
+			
+			dom.search("//img").each { |img|
+				
+				uri = repair_uri(img[:src])
+				
+				# определяю имя файла для картинки
+				begin
+					# сначала по URI
+					file_path = @book.uri2file_path(image: uri)
+				rescue
+					begin
+						# если не вышло, с привлечением заголовков
+						headers = download(uri: uri, mode: 'headers')
+						file_path = @book.uri2file_path(image: uri, headers: headers)
+					rescue => e
+						Msg::warning "не удалось получить имя файла для картинки '#{uri}'", e
+						next
+					end
+				end
+				
+				# проверяю, загружено ли уже
+				if File.exists?(file_path) then
+					Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
+					next
+				end
+				
+				# скачиваю картинку
+				begin
+					data = download(uri: uri)
+				rescue => e
+					Msg::warning "не удалось загрузить картинку '#{uri}' (#{e.message})"
+					next
+				end
+				
+				# сохраняю картинку в файл
+				begin
+					File.write(file_path, data[:data])
+					img[:src] = file_path
+				rescue => e
+					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
+					next
+				end
+			}
+			
+			return dom
+		end
+		
+		def get_title(dom)
+			#Msg::debug("#{self.class}.#{__method__}()")
 			
 			title = dom.search('//title').text
 				#Msg::debug " title: #{title}"
@@ -327,27 +474,27 @@ class Book
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
 				
-				Msg::debug " ссылок до уникализации #{links.count}"
+				Msg::debug " всего ссылок: #{links.count}"
 			links = links.uniq
-				Msg::debug " ссылок после уникализации #{links.count}"
+				Msg::debug " уникальных: #{links.count}"
 			
 			links_hash = links.map { |lnk| 
 				#Msg::debug "lnk: #{lnk}"
 				begin
 					[lnk, repair_uri(lnk)]
 				rescue => e
-					Msg::warning "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
+					Msg::notice "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
 				end
 			}.compact.to_h
 			
-				Msg::debug(" собрано ссылок: #{links_hash.count}")
+				Msg::debug(" восстановленно: #{links_hash.count}")
 			
 			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
 				@current_rule.accept_link?(lnk_full) 
 			}
 			
-				Msg::debug(" оставлено ссылок: #{links_hash.count}")
+				Msg::debug(" оставлено: #{links_hash.count}")
 			
 			links_hash.each_pair { |lnk_orig,lnk_full| 
 				@book.link_add(@current_id, lnk_full) 
@@ -357,84 +504,24 @@ class Book
 		end
 		
 		def make_links_offline(links_hash, page)
-			Msg::debug("#{__method__}()")
+			Msg::debug("#{self.class}.#{__method__}()")
 			
 			page.search("//a").map { |a|
 				links_hash.each_pair { |lnk_orig,lnk_full|
 					if a[:href]==lnk_orig then
-						lnk_local = @book.uri2file_path(lnk_full) 
+						lnk_local = @book.uri2file_path(text: lnk_full) 
 							#Msg::debug "локализация ссылки '#{lnk_orig}' -> '#{lnk_local}'"
 						a[:href] = lnk_local
 					end
 				}
 			}
 			
-			#~ links_hash.each_pair { |lnk_orig,lnk_full|
-				#~ lnk_local = @book.uri2file_path(lnk_full)
-				#~ page.gsub!(lnk_orig, lnk_local)
-					#~ #Msg::debug " #{lnk_orig} --> #{lnk_local}"
-			#~ }
-			
 			page
-		end
-		
-
-		def get_image(uri)
-			Msg::debug("#{__method__}(#{uri})")
-
-			data = load_page(uri: uri)
-
-			#~ return {
-			#~ data: data[:page],
-			#~ extension: 'jpg',
-			#~ }
-		end
-		
-		def load_page(arg)
-			#Msg::debug("#{self.class}.#{__method__}(#{uri})")
-
-			#uri = URI.escape(uri) if not uri.urlencoded?
-			
-			uri = URI(arg[:uri])
-			redirects_limit = arg[:redirects_limit] || 10		# опасная логика...
-			
-			raise ArgumentError, 'слишком много перенаправлений' if redirects_limit == 0
-
-			data = {}
-
-			Net::HTTP.start(uri.host, uri.port, :use_ssl => 'https'==uri.scheme) { |http|
-
-				request = Net::HTTP::Get.new(uri.request_uri)
-				request['User-Agent'] = "Mozilla/5.0 (X11; Linux i686; rv:39.0) Gecko/20100101 Firefox/39.0 [TestCrawler (#{@book.contacts})]"
-
-				response = http.request request
-
-				case response
-				when Net::HTTPRedirection then
-					location = response['location']
-					puts "перенаправление на '#{location}'"
-					data =  send(
-						__method__,
-						{ :uri => location, :redirects_limit => (redirects_limit-1) }
-					)
-				when Net::HTTPSuccess then
-					data = {
-						:page => response.body,
-						:headers => response.to_hash,
-					}
-				else
-					response.value
-				end
-			}
-			
-			#puts "========== Headers: =========="
-			#data[:headers].each_pair { |k,v| puts "#{k}: #{v}" }
-			#puts "=========================="
-		  
-			return data
 		end
 
 		def recode_page(page, headers, target_charset='UTF-8')
+			Msg::debug("#{self.class}.#{__method__}()")
+			
 			page_charset = nil
 			headers_charset = nil
 			
@@ -485,52 +572,8 @@ class Book
 			return uri.to_s
 		end
 		
-		# возвращает хеш { src => nil }, ключи заполняются в процессе загрузки картинок; ссылки ремонтируются непосредственно
-		# перед загрузкой. Хэш используется для "локализации" html-страницы.
-		def load_images(params)
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			links = params[:page].scan(/<img\s+src\s*=\s*['"](?<image_uri>[^'"]+)['"][^>]*>/).map { |lnk| lnk.first }
-			
-			links_hash = {}
-			
-			links.each { |lnk| links_hash[lnk] = nil }
-			
-			links_hash.each_key { |lnk|
-				links_hash[lnk] = repair_uri(params[:uri], lnk)
-			}
-			
-			links_hash.each_pair { |k,v| Msg::debug(" #{k} ---> #{v}") }
-			
-			#~ links_hash.each_pair { |orig_link,full_link|
-				#~ begin
-					#~ image_data = load_page(uri: full_link)
-					#~ image_file = File.join(@images_dir,"#{rand(10000)}.jpg")
-					#~ File.write(image_file,image_data)
-					#~ Msg::debug("загружено изображение (#{full_link}")
-				#~ rescue => e
-					#~ Msg::debug("ошибка загрузки изображения (#{full_link})")
-					#~ image_file = nil
-				#~ end
-				#~ 
-				#~ links_hash[orig_link] = image_file
-			#~ }
-			
-			links_hash
-		end
-		
-		def fix_page_images(page, images_hash)
-			Msg::debug("#{self.class}.#{__method__}()")
-			
-			images_hash.each_pair { |old_src, new_src|
-				page = page.gsub(old_src, new_src)
-			}
-			
-			return page
-		end
-
 		def save_page(title, body)
-			Msg::debug("#{self.class}.#{__method__}(#{title})")
+			Msg::debug("#{self.class}.#{__method__}('#{title}')")
 			
 			body = body.to_html
 			
@@ -551,7 +594,7 @@ class Book
 </html>
 MARKUP
 			
-			File::write(@file_path, html) and Msg::debug "записан файл #{@file_name}"
+			File::write(@file_path, html) and Msg::debug " записан файл #{@file_name}"
 			
 			@book.link_update(
 				set: {title: @title, file: @file_name}, 
@@ -559,6 +602,16 @@ MARKUP
 			)
 		end
 	end
+	
+	def headers2ext(headers)
+		#Msg::debug("#{self.class}.#{__method__}(#{headers.keys})")
+		
+		content_type = headers.fetch('content-type').first.strip.downcase
+		
+		ext = content_type.match(/^(?<type>[a-z]+)\/(?<ext>[a-z]+)$/i)[:ext].strip.downcase
+	end
+	
+	
 end
 
 
@@ -568,20 +621,44 @@ class Msg
 	#~ end
 	
 	def self.debug(msg, params={})
+		#msg = msg.white.on_light_white
 		params.fetch(:nobr,false) ? print(msg) : puts(msg)
 		#puts "#{msg}, nobr: #{params.fetch(:nobr,false)}"
 	end
 	
 	def self.info(msg)
-		puts msg
+		puts msg.blue
 	end
 	
-	def self.warning(msg)
-		STDERR.puts "ВНИМАНИЕ: #{msg}"
+	def self.notice(msg)
+		STDERR.puts "#{msg}".cyan
 	end
 	
-	def self.error(msg)
-		STDERR.puts "ОШИБКА: #{msg}"
+	def self.warning(*msg)
+		STDERR.puts "ВНИМАНИЕ:".red
+		self.prepare_msg(msg).each {|m|
+			STDERR.puts m.to_s.red
+		}
+	end
+	
+	def self.error(*msg)
+		STDERR.puts "ОШИБКА:".black.on_red
+		self.prepare_msg(msg).each {|m|
+			STDERR.puts m.to_s.black.on_red
+		}
+	end
+	
+	private
+	
+	def self.prepare_msg(*msg)
+		msg = msg.flatten.map {|m|
+			if m.kind_of? Exception then
+				[m.message, m.backtrace]
+			else
+				m
+			end
+		}
+		msg.flatten
 	end
 end
 
@@ -593,20 +670,23 @@ class String
 	end
 end
 
-
 book = Book.new
 
 book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-#book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+book.add_source 'http://opennet.ru'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
+#book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
+
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
-book.page_limit = 2
+
+book.page_limit = 1
 
 book.threads = 1
 

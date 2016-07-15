@@ -10,7 +10,7 @@ class DefaultSite
 	}
 	
 	def initialize(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		@current_rule = get_rule(uri)
 			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
@@ -28,15 +28,13 @@ class DefaultSite
 	end
 
 	def redirect(uri)
-		Msg::debug("#{self.class}.#{__method__}(#{uri})")
-		#Msg::debug " @current_rule[:redirect]: #{@current_rule[:redirect]}"
-		#Msg::debug " @current_rule[:redirect].nil?: #{@current_rule[:redirect].nil?}"
+		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		if @current_rule[:redirect].nil? then
 			uri
 		else
 			new_uri = @current_rule[:redirect].call(uri)
-				Msg::debug " программное перенаправлние на '#{new_uri}'"
+				Msg::notice " программное перенаправлние на '#{new_uri}'"
 			new_uri
 		end
 	end
@@ -50,13 +48,13 @@ class DefaultSite
 
 	# Служебные методы
 	def get_rule(uri)
-		Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
-		link_name = uri2name(uri)
-			#Msg::debug " link_name: #{link_name}"
+		link_alias = uri2name(uri)
+			Msg::debug " псевдоним сылки: #{link_alias}"
 		
-		rule = name2rule(link_name)
-			#Msg::debug " rule: #{rule}"
+		rule = name2rule(link_alias)
+			#Msg::debug " правило: #{rule}"
 		
 		return rule
 	end
