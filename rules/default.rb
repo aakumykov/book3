@@ -16,11 +16,13 @@ class DefaultSite
 			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
 	
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
-		
+				
 		@image_whitelist = prepare_filter(image_whitelist)
+			#Msg::debug "(#{self.class}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
 			Msg::debug "(#{self.class}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
 			
 		@image_blacklist = prepare_filter(image_blacklist)
+			#Msg::debug "(#{self.class}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 			Msg::debug "(#{self.class}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
@@ -34,7 +36,7 @@ class DefaultSite
 	end
 	
 	def accept_image?(src)
-		case @@image_mode.to_sym
+		case image_mode.to_sym
 		when :blacklist
 			! src.strip.match(@image_blacklist)
 		when :whitelist
@@ -47,12 +49,12 @@ class DefaultSite
 	def redirect(uri)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
-		if @current_rule[:redirect].nil? then
-			uri
-		else
+		if @current_rule.has_key?(:redirect) then
 			new_uri = @current_rule[:redirect].call(uri)
 				Msg::notice " программное перенаправлние на '#{new_uri}'"
 			new_uri
+		else
+			uri
 		end
 	end
 

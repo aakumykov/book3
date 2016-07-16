@@ -21,10 +21,12 @@ class OpennetRu < DefaultSite
 			links: [],
 		},
 	}
-	
-	@image_mode = 'blacklist'
 
 	private
+	
+	def image_mode
+		'blacklist'
+	end
 	
 	def image_blacklist
 		[

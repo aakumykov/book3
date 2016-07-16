@@ -34,9 +34,11 @@ class RuWikipediaOrg < DefaultSite
 		},
 	}
 	
-	@@image_mode = 'whitelist'
-	
 	private
+
+	def image_mode
+		'whitelist'
+	end
 
 	def image_whitelist
 		[
