@@ -37,12 +37,18 @@ class RuWikipediaOrg < DefaultSite
 	private
 
 	def image_mode
-		'whitelist'
+		'white_black'
 	end
 
 	def image_whitelist
 		[
 			'//upload\.wikimedia\.org/wikipedia/commons/thumb/',
+		]
+	end
+	
+	def image_blacklist
+		[
+			'/15px-Commons-logo\.svg\.png$',
 		]
 	end
 	

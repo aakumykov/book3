@@ -18,12 +18,10 @@ class DefaultSite
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 				
 		@image_whitelist = prepare_filter(image_whitelist)
-			#Msg::debug "(#{self.class}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
-			Msg::debug "(#{self.class}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
+			Msg::debug "(#{self.class}:#{image_mode}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
 			
 		@image_blacklist = prepare_filter(image_blacklist)
-			#Msg::debug "(#{self.class}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
-			Msg::debug "(#{self.class}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
+			Msg::debug "(#{self.class}:#{image_mode}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
 	def accept_link?(uri)
@@ -36,11 +34,19 @@ class DefaultSite
 	end
 	
 	def accept_image?(src)
+		black = !src.strip.match(@image_blacklist).nil?
+		white = !src.strip.match(@image_whitelist).nil?
+		
 		case image_mode.to_sym
 		when :blacklist
-			! src.strip.match(@image_blacklist)
+			!black
 		when :whitelist
-			src.strip.match(@image_whitelist)
+			white
+		when :white_black
+			white && !black
+		when :black_white
+			Msg::notice "black_white, (#{src}), black:#{black}, white:#{white}"
+			(black && white) || !black
 		else
 			raise "неизвестный режим приёма картинок '#{@@image_mode}'"
 		end

@@ -25,7 +25,7 @@ class OpennetRu < DefaultSite
 	private
 	
 	def image_mode
-		'blacklist'
+		'black_white'
 	end
 	
 	def image_blacklist
@@ -38,6 +38,12 @@ class OpennetRu < DefaultSite
 			'//opennet\.ru/img/',
 			'//opennet\.ru/img/',
 			'//www\.gravatar\.com',
+		]
+	end
+	
+	def image_whitelist
+		[
+			'//opennet\.ru/xml\.gif',
 		]
 	end
 	
