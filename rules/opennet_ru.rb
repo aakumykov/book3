@@ -23,6 +23,20 @@ class OpennetRu < DefaultSite
 	}
 
 	private
+	
+	def image_blacklist
+		[
+			super,
+			'//opennet\.ru/banner\.gif',
+			'//opennet\.ru/p\.gif',
+			'//opennet\.ru/xml\.gif',
+			'//opennet\.ru/twitter\.png',
+			'//opennet\.ru/img/',
+			'//opennet\.ru/img/',
+			'//www\.gravatar\.com',
+		]
+	end
+	
 
 	def MainPage(dom)
 		dom.search('//body//table')[2]

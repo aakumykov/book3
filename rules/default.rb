@@ -9,12 +9,6 @@ class DefaultSite
 		'^.+$' => :AnyPage,
 	}
 	
-	@@image_blacklist = [
-		'//top\.mail\.ru',
-		'//top-[^.]+\.mail\.ru',
-		'//counter\.rambler\.ru',
-		'//[^.]+\.gravatar\.com',
-	]
 	
 	def initialize(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
@@ -24,10 +18,10 @@ class DefaultSite
 	
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
-		#@@image_blacklist = ''
-		
-		@@image_blacklist = Regexp.union( @@image_blacklist.map{|pattern| Regexp.new(pattern)} )
-			Msg::debug "IMAGE BLACKLIST: #{@@image_blacklist}"
+		@image_blacklist = image_blacklist.flatten.sort_by{|pat| pat.length}.reverse
+		@image_blacklist = @image_blacklist.map{|pat| Regexp.new(pat)}
+		@image_blacklist = Regexp.union(@image_blacklist)
+			Msg::debug "ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
 	def accept_link?(uri)
@@ -37,6 +31,10 @@ class DefaultSite
 			#Msg::debug "link_name: #{link_name}"
 		
 		@current_rule[:links].include?(link_name.to_sym)
+	end
+	
+	def accept_image?(src)
+		! src.strip.match(@image_blacklist)
 	end
 
 	def redirect(uri)
@@ -55,11 +53,19 @@ class DefaultSite
 		self.send(@current_rule[:processor], page)
 	end
 
-	def accept_image?(src)
-		! src.to_s.strip.match(@@image_blacklist)
-	end
+	
+
 
 	private
+	
+	def image_blacklist
+		[
+			'//top\.mail\.ru',
+			'//top-[^.]+\.mail\.ru',
+			'//counter\.rambler\.ru',
+			'//[^.]+\.gravatar\.com',
+		]
+	end
 
 	# Служебные методы
 	def get_rule(uri)

@@ -308,6 +308,8 @@ class Book
 			
 			result_page = make_links_offline(links_hash, result_page)
 			
+			#load_images # переделать в будущем так?
+			
 			result_page = load_images(result_page)
 			
 			save_page(@title,result_page)
@@ -418,7 +420,7 @@ class Book
 				uri = repair_uri(img[:src])
 				
 				if ! @current_rule.accept_image?(uri) then
-					Msg::notice "отбрасываю картинку '#{uri}'"
+					#Msg::notice "отбрасываю картинку '#{uri}'"
 					next
 				end
 				
@@ -681,13 +683,14 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-#book.add_source 'http://opennet.ru'
-book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
+book.add_source 'http://opennet.ru'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
 #book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
 
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+#book.add_source https://ru.wikipedia.org/wiki/Насекомые
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
