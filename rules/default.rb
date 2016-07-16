@@ -8,9 +8,7 @@ class DefaultSite
 	@@rules = {
 		'^.+$' => :AnyPage,
 	}
-	
-	@@image_mode = 'blacklist'
-	
+		
 	def initialize(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
@@ -20,10 +18,10 @@ class DefaultSite
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
 		@image_whitelist = prepare_filter(image_whitelist)
-			Msg::debug "СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
+			Msg::debug "(#{self.class}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
 			
 		@image_blacklist = prepare_filter(image_blacklist)
-			Msg::debug "ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
+			Msg::debug "(#{self.class}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
 	def accept_link?(uri)

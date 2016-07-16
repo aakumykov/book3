@@ -21,6 +21,8 @@ class OpennetRu < DefaultSite
 			links: [],
 		},
 	}
+	
+	@image_mode = 'blacklist'
 
 	private
 	

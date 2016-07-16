@@ -682,23 +682,23 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-#book.add_source 'http://opennet.ru'
+book.add_source 'http://opennet.ru'
 #book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
 #book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
 
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 #book.add_source 'https://ru.wikipedia.org/wiki/Linux'
-# насекомые
+# насекомые:
 #book.add_source 'https://ru.wikipedia.org/wiki/%D0%9D%D0%B0%D1%81%D0%B5%D0%BA%D0%BE%D0%BC%D1%8B%D0%B5'
-# уховёртка
+# уховёртка:
 book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1%80%D1%82%D0%BA%D0%B0_%D0%BE%D0%B1%D1%8B%D0%BA%D0%BD%D0%BE%D0%B2%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 1
+book.page_limit = 2
 
-book.threads = 1
+book.threads = 2
 
 book.prepare
 book.save
