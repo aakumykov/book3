@@ -34,8 +34,16 @@ class RuWikipediaOrg < DefaultSite
 		},
 	}
 	
+	@@image_mode = 'whitelist'
+	
 	private
 
+	def image_whitelist
+		[
+			'//upload\.wikimedia\.org/wikipedia/commons/thumb/',
+		]
+	end
+	
 	def MainPage(dom)
 		dom.search("//div[@id='content']")
 	end

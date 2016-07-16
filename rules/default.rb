@@ -9,6 +9,7 @@ class DefaultSite
 		'^.+$' => :AnyPage,
 	}
 	
+	@@image_mode = 'blacklist'
 	
 	def initialize(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
@@ -18,9 +19,10 @@ class DefaultSite
 	
 		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
-		@image_blacklist = image_blacklist.flatten.sort_by{|pat| pat.length}.reverse
-		@image_blacklist = @image_blacklist.map{|pat| Regexp.new(pat)}
-		@image_blacklist = Regexp.union(@image_blacklist)
+		@image_whitelist = prepare_filter(image_whitelist)
+			Msg::debug "СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
+			
+		@image_blacklist = prepare_filter(image_blacklist)
 			Msg::debug "ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
@@ -34,7 +36,14 @@ class DefaultSite
 	end
 	
 	def accept_image?(src)
-		! src.strip.match(@image_blacklist)
+		case @@image_mode.to_sym
+		when :blacklist
+			! src.strip.match(@image_blacklist)
+		when :whitelist
+			src.strip.match(@image_whitelist)
+		else
+			raise "неизвестный режим приёма картинок '#{@@image_mode}'"
+		end
 	end
 
 	def redirect(uri)
@@ -58,8 +67,13 @@ class DefaultSite
 
 	private
 	
+	def image_whitelist
+		[ '.*' ]
+	end
+	
 	def image_blacklist
 		[
+			#'//data:image/',
 			'//top\.mail\.ru',
 			'//top-[^.]+\.mail\.ru',
 			'//counter\.rambler\.ru',
@@ -68,6 +82,12 @@ class DefaultSite
 	end
 
 	# Служебные методы
+	def prepare_filter(list)
+		list = list.flatten.sort_by{|pat| pat.length}.reverse
+		list = list.map{|pat| Regexp.new(pat)}
+		Regexp.union(list)
+	end
+	
 	def get_rule(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
