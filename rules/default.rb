@@ -1,36 +1,42 @@
 #coding: UTF-8
 
 class DefaultSite
-	@@link_aliases = {
-		any_page: '^.+$'
-	}
+	def link_aliases
+		{ 
+			any_page: '^.+$',
+		}
+	end
 
-	@@rules = {
-		'^.+$' => :AnyPage,
-	}
+	def rules
+		{
+			any_page: {
+				processor: :AnyPage,
+				links: [],
+			},
+		}
+	end
 		
 	def initialize(uri)
-		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
+		#Msg::debug "#{self.class}.#{__method__}('#{uri}')"
+		
+		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
+		
+		@rules = rules
 		
 		@current_rule = get_rule(uri)
-			#Msg::debug "@current_rule: #{@current_rule} (#{@current_rule.class})"
-	
-		@@link_aliases = @@link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 				
 		@image_whitelist = prepare_filter(image_whitelist)
-			Msg::debug "(#{self.class}:#{image_mode}) СВЕТЛЫЙ СПИСОК КАРТИНОК: #{@image_whitelist}"
 			
 		@image_blacklist = prepare_filter(image_blacklist)
-			Msg::debug "(#{self.class}:#{image_mode}) ТЁМНЫЙ СПИСОК КАРТИНОК: #{@image_blacklist}"
 	end
 
 	def accept_link?(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}))"
 		
-		link_name = uri2name(uri)
-			#Msg::debug "link_name: #{link_name}"
+		link_alias = uri2alias(uri)
+			Msg::debug "link_alias: #{link_alias} (#{uri})"
 		
-		@current_rule[:links].include?(link_name.to_sym)
+		@current_rule[:links].include?(link_alias.to_sym)
 	end
 	
 	def accept_image?(src)
@@ -45,7 +51,6 @@ class DefaultSite
 		when :white_black
 			white && !black
 		when :black_white
-			Msg::notice "black_white, (#{src}), black:#{black}, white:#{white}"
 			(black && white) || !black
 		else
 			raise "неизвестный режим приёма картинок '#{@@image_mode}'"
@@ -97,7 +102,7 @@ class DefaultSite
 	def get_rule(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
-		link_alias = uri2name(uri)
+		link_alias = uri2alias(uri)
 			Msg::debug " псевдоним сылки: #{link_alias}"
 		
 		rule = name2rule(link_alias)
@@ -106,11 +111,11 @@ class DefaultSite
 		return rule
 	end
 	
-	def uri2name(uri)
+	def uri2alias(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}))"
 		
 		begin
-			@@link_aliases.each_pair { |name,pattern|
+			@link_aliases.each_pair { |name,pattern|
 				pattern = [pattern] if not pattern.is_a? Array				
 				pattern = Regexp.union( pattern.map { |p| Regexp.new(p) } )
 				raise name.to_s if uri.match(pattern)
@@ -127,7 +132,9 @@ class DefaultSite
 	end
 
 	def name2rule(name)
-		@@rules[name.to_sym]
+		Msg::debug "#{self.class}.#{__method__}('#{name}'))"
+		
+		@rules[name.to_sym]
 	end
 
 	# Страничные методы
