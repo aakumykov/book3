@@ -299,6 +299,7 @@ class Book
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
+				Msg::debug '---------------------------------'
 			@page = get_page(@current_uri)
 			@title = get_title(@page)
 			
@@ -350,7 +351,7 @@ class Book
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
+			#Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 				#Msg::debug " uri: #{uri}"
 				#Msg::debug " mode: #{mode}"
@@ -384,7 +385,7 @@ class Book
 			case response
 			when Net::HTTPRedirection then
 				location = response['location']
-					Msg::notice " перенаправление на '#{location}'"
+					Msg::notice " http-перенаправление на '#{location}'"
 				
 				result =  send(__method__, {
 					uri: location, 
@@ -440,7 +441,7 @@ class Book
 				
 				# проверяю, загружено ли уже
 				if File.exists?(file_path) then
-					Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
+					#Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
 					next
 				end
 				
@@ -456,6 +457,7 @@ class Book
 				begin
 					File.write(file_path, data[:data])
 					img[:src] = file_path
+					#img[:src] = uri # для настройки чёрного списка
 				rescue => e
 					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
 					next
@@ -480,12 +482,13 @@ class Book
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
 				
-				Msg::debug " всего ссылок: #{links.count}"
+				#Msg::debug " всего ссылок: #{links.count}"
+				
 			links = links.uniq
-				Msg::debug " уникальных: #{links.count}"
+				
+				#Msg::debug " уникальных: #{links.count}"
 			
 			links_hash = links.map { |lnk| 
-				#Msg::debug "lnk: #{lnk}"
 				begin
 					[lnk, repair_uri(lnk)]
 				rescue => e
@@ -494,13 +497,13 @@ class Book
 				end
 			}.compact.to_h
 			
-				Msg::debug(" восстановленно: #{links_hash.count}")
+				#Msg::debug(" восстановленно: #{links_hash.count}")
 			
 			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
 				@current_rule.accept_link?(lnk_full) 
 			}
 			
-				Msg::debug(" оставлено: #{links_hash.count}")
+				#Msg::debug(" оставлено: #{links_hash.count}")
 			
 			links_hash.each_pair { |lnk_orig,lnk_full| 
 				@book.link_add(@current_id, lnk_full) 
@@ -696,9 +699,9 @@ book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 10
+book.page_limit = 5
 
-book.threads = 5
+book.threads = 1
 
 book.prepare
 book.save

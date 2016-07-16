@@ -20,23 +20,38 @@ class DefaultSite
 		#Msg::debug "#{self.class}.#{__method__}('#{uri}')"
 		
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
-		
 		@rules = rules
 		
 		@current_rule = get_rule(uri)
 				
 		@image_whitelist = prepare_filter(image_whitelist)
-			
 		@image_blacklist = prepare_filter(image_blacklist)
+		
+		@links_filter = @current_rule[:links]
+			#Msg::debug "links_filter: #{@links_filter}"
+		
+		@links_limit = @current_rule.fetch(:links_limit,nil)
+			#Msg::debug "links_limit: #{@links_limit}"
+		
+		@links_accepted = 0
+			#Msg::debug "links_accepted: #{@links_accepted}"
 	end
 
 	def accept_link?(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}))"
 		
 		link_alias = uri2alias(uri)
-			Msg::debug "link_alias: #{link_alias} (#{uri})"
 		
-		@current_rule[:links].include?(link_alias.to_sym)
+		if @links_limit && @links_accepted >= @links_limit then
+			return false
+		else
+			if @links_filter.include?(link_alias) then
+				@links_accepted += 1
+				return true
+			else
+				return false
+			end
+		end
 	end
 	
 	def accept_image?(src)
@@ -119,15 +134,12 @@ class DefaultSite
 				pattern = [pattern] if not pattern.is_a? Array				
 				pattern = Regexp.union( pattern.map { |p| Regexp.new(p) } )
 				raise name.to_s if uri.match(pattern)
-			}
-			
-			Msg::error "не найдено ни одного правила"
-			
-			return 'any_page'
+			}			
+			return :any_page
 		rescue => e
 			name = e.message
 				#Msg::debug " найдено правило '#{name}'"
-			name
+			name.to_sym
 		end
 	end
 

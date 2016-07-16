@@ -15,7 +15,7 @@ class OpennetRu < DefaultSite
 		{
 			main_page: {
 				processor: :MainPage,
-				links: [ :news_article ]
+				links: [ :news_article ],
 			},
 			news_article: {
 				processor: :NewsArticle,
