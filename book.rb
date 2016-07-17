@@ -635,12 +635,20 @@ class Msg
 		#puts "#{msg}, nobr: #{params.fetch(:nobr,false)}"
 	end
 	
+	def self.green(msg)
+		puts msg.green
+	end
+	
+	def self.grey(msg)
+		puts msg.white
+	end
+	
 	def self.info(msg)
 		puts msg.blue
 	end
 	
 	def self.notice(msg)
-		STDERR.puts "#{msg}".cyan
+		STDERR.puts "#{msg}".yellow
 	end
 	
 	def self.warning(*msg)

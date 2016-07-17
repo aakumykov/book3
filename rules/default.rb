@@ -77,7 +77,7 @@ class DefaultSite
 		
 		if @current_rule.has_key?(:redirect) then
 			new_uri = @current_rule[:redirect].call(uri)
-				Msg::notice " программное перенаправлние на '#{new_uri}'"
+				Msg::grey " программное перенаправлние на '#{new_uri}'"
 			new_uri
 		else
 			uri
