@@ -674,7 +674,7 @@ end
 
 class String
 	def urlencoded?
-		return true if self.match(/[%0-9ABCDEF]{3,}/i)
+		return true if self.match(/(%[0-9ABCDEF]{2})+/i)
 		return false
 	end
 end
