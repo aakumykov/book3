@@ -27,7 +27,7 @@ class RuWikipediaOrg < DefaultSite
 					"https://ru.wikipedia.org/w/index.php?title=#{title}&printable=yes"
 				},
 				processor: :AnArticle,
-				filters: [ :RemoveScripts, :RemoveNoscripts ],
+				filters: [ :RemoveScripts, :RemoveNoscripts, :RemoveNavigation ],
 				links: [ :an_article ],
 				links_limit: 5,
 			},
@@ -65,6 +65,17 @@ class RuWikipediaOrg < DefaultSite
 	def AnArticle(dom)
 		#MainPage(dom)
 		dom.search("//div[@id='content']")
-		dom
+		return dom
+	end
+	
+	# страничные фильтры
+	def RemoveNavigation(dom)
+		dom.search("//div[@id='mw-navigation']").remove
+		dom.search("//table[@class='navbox']").remove
+		
+		dom.search("//div[@id='mw-hidden-catlinks']").remove
+		dom.search("//div[@id='mw-normal-catlinks']").remove		
+		
+		return dom
 	end
 end

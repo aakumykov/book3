@@ -74,6 +74,7 @@ class DefaultSite
 	def process_page(dom)
 		# главный обработчик страницы
 		self.send(@page_rule[:processor], dom)
+			Msg::cyan "страницу обрабатывает '#{self.class}.#{@page_rule[:processor]}()'"
 		
 		# фильтры страницы
 		@filters.each { |filter_name|
