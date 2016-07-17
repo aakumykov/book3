@@ -18,7 +18,7 @@ class Book
 	attr_reader :text_dir, :images_dir, :contacts
 
 	@@db_name = 'links.sqlite3'
-	@@table_name = 'table1'
+	@@table_name = 'links'
 	
 	@@rules_dir = 'rules'
 	@@work_dir = 'tmp'
@@ -108,7 +108,8 @@ class Book
 	
 
 	def add_source(uri)
-		#Msg::debug("#{self.class}.#{__method__}(#{arg})")
+		Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+		
 		link_add(0,uri)
 	end
 
@@ -122,10 +123,15 @@ class Book
 			threads = []
 			
 			links = get_fresh_links
+				#Msg::cyan "fresh links: #{links}"
 				Msg::debug "Ссылок на цикл: #{links.count}"
 			
 			links.each do |row|
-				id, uri = row
+				id = row[:id]
+				uri = row[:uri]
+				
+					#Msg::cyan "id: #{id}, uri: #{uri}"
+				
 				threads << Thread.new {
 					Processor.new(self, id, uri).work
 				}
@@ -150,9 +156,9 @@ class Book
 	end
 
 	def prepare_complete?
-		Msg::debug("#{self.class}.#{__method__}", nobr: true)
-
-			Msg::debug(", pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
+		Msg::debug "#{self.class}.#{__method__}"
+			
+			Msg::debug(" pages: #{@page_count}/#{@page_limit}, errors: #{@error_count}/#{@error_limit}, depth: #{@depth}/#{@depth_limit}")
 
 		if 0==get_fresh_links.count then
 			Msg::info "закончились ссылки"
@@ -181,7 +187,25 @@ class Book
 	
 	def get_fresh_links
 		Msg::debug("#{self.class}.#{__method__}()")
-		@@db.execute("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
+		
+		res = @@db.query("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
+		
+		links = []
+		
+		while (row = res.next_hash) do
+			# .to_h должен быть именно здесь, чтобы не влиять на условие цикла
+			row = row.to_h
+				
+			# переделываю ключи словаря из строк в символы
+			# (так как sqlite предоставляет их в неудобном для Ruby виде)
+			row = row.map{|k,v| [k.to_sym,v]}.to_h
+				
+			row[:uri] = URI.smart_encode(row[:uri])
+			
+			links << row
+		end
+		
+		return links
 	end
 
 	def get_rule(uri)
@@ -209,7 +233,10 @@ class Book
 	end
 
 	def link_add(parent_id,uri)
-		#Msg::debug("#{self.class}.#{__method__}(#{parent_id}, #{uri})")
+		#Msg::green("#{self.class}.#{__method__}(#{parent_id}, '#{uri}')")
+		
+		uri = URI.smart_decode(uri)
+			#Msg::debug "smart_decode: #{uri}"
 		
 		@@db.execute(
 			"INSERT INTO #{@@table_name} (parent_id, uri) VALUES (?, ?)",
@@ -277,7 +304,7 @@ class Book
 	class Processor
 		
 		def initialize(book, id, uri)
-			#Msg::debug("#{self.class}.#{__method__}(#{id}, #{uri})")
+			#Msg::debug("#{self.class}.#{__method__}(#{id}, '#{uri}')")
 			
 			the_uri = URI(uri)
 			
@@ -299,6 +326,7 @@ class Book
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
+				Msg::debug '---------------------------------'
 			@page = get_page(@current_uri)
 			@title = get_title(@page)
 			
@@ -309,6 +337,7 @@ class Book
 			result_page = make_links_offline(links_hash, result_page)
 			
 			result_page = load_images(result_page)
+			#load_images # переделать в будущем так?
 			
 			save_page(@title,result_page)
 			
@@ -316,7 +345,7 @@ class Book
 		end
 		
 		def get_page(uri)
-			Msg::debug("#{self.class}.#{__method__}(#{uri})")
+			Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
 			uri = @current_rule.redirect(uri)
 			
@@ -349,7 +378,7 @@ class Book
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
+			#Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 				#Msg::debug " uri: #{uri}"
 				#Msg::debug " mode: #{mode}"
@@ -383,7 +412,7 @@ class Book
 			case response
 			when Net::HTTPRedirection then
 				location = response['location']
-					Msg::notice " перенаправление на '#{location}'"
+					Msg::notice " http-перенаправление на '#{location}'"
 				
 				result =  send(__method__, {
 					uri: location, 
@@ -392,7 +421,7 @@ class Book
 				})
 			when Net::HTTPSuccess then
 				
-					#Msg::debug "response keys: #{response.to_hash.keys}"
+					#Msg::debug "response keys: #{response.to_h.keys}"
 			
 				result = {
 					:data => response.body.to_s,
@@ -415,7 +444,12 @@ class Book
 			
 			dom.search("//img").each { |img|
 				
-				uri = repair_uri(img[:src])
+				uri = complete_uri(img[:src])
+				
+				if ! @current_rule.accept_image?(uri) then
+					#Msg::notice "отбрасываю картинку '#{uri}'"
+					next
+				end
 				
 				# определяю имя файла для картинки
 				begin
@@ -434,7 +468,7 @@ class Book
 				
 				# проверяю, загружено ли уже
 				if File.exists?(file_path) then
-					Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
+					#Msg::debug "картинка '#{uri}' уже загружена (#{file_path})"
 					next
 				end
 				
@@ -450,6 +484,7 @@ class Book
 				begin
 					File.write(file_path, data[:data])
 					img[:src] = file_path
+					#img[:src] = uri # для настройки чёрного списка
 				rescue => e
 					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
 					next
@@ -474,27 +509,28 @@ class Book
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
 				
-				Msg::debug " всего ссылок: #{links.count}"
+				#Msg::debug " всего ссылок: #{links.count}"
+				
 			links = links.uniq
-				Msg::debug " уникальных: #{links.count}"
+				
+				#Msg::debug " уникальных: #{links.count}"
 			
 			links_hash = links.map { |lnk| 
-				#Msg::debug "lnk: #{lnk}"
 				begin
-					[lnk, repair_uri(lnk)]
+					[lnk, complete_uri(lnk)]
 				rescue => e
 					Msg::notice "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
 				end
 			}.compact.to_h
 			
-				Msg::debug(" восстановленно: #{links_hash.count}")
+				#Msg::debug(" восстановленно: #{links_hash.count}")
 			
 			links_hash = links_hash.keep_if { |lnk_orig,lnk_full| 
 				@current_rule.accept_link?(lnk_full) 
 			}
 			
-				Msg::debug(" оставлено: #{links_hash.count}")
+				#Msg::debug(" оставлено: #{links_hash.count}")
 			
 			links_hash.each_pair { |lnk_orig,lnk_full| 
 				@book.link_add(@current_id, lnk_full) 
@@ -562,7 +598,7 @@ class Book
 			return page
 		end
 		
-		def repair_uri(uri)
+		def complete_uri(uri)
 			#Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
 			uri = URI( uri.strip.gsub(/\/+$/,'') )
@@ -620,18 +656,28 @@ class Msg
 		#~ puts msg
 	#~ end
 	
-	def self.debug(msg, params={})
-		#msg = msg.white.on_light_white
-		params.fetch(:nobr,false) ? print(msg) : puts(msg)
-		#puts "#{msg}, nobr: #{params.fetch(:nobr,false)}"
+	def self.debug(msg)
+		puts msg.to_s
+	end
+	
+	def self.green(msg)
+		puts msg.to_s.green
+	end
+	
+	def self.grey(msg)
+		puts msg.to_s.white
+	end
+	
+	def self.cyan(msg)
+		puts msg.to_s.cyan
 	end
 	
 	def self.info(msg)
-		puts msg.blue
+		puts msg.to_s.blue
 	end
 	
 	def self.notice(msg)
-		STDERR.puts "#{msg}".cyan
+		STDERR.puts msg.to_s.yellow
 	end
 	
 	def self.warning(*msg)
@@ -665,10 +711,26 @@ end
 
 class String
 	def urlencoded?
-		return true if self.match(/[%0-9ABCDEF]{3,}/i)
+		return true if self.match(/(%[0-9ABCDEF]{2})+/i)
 		return false
 	end
 end
+
+
+module URI
+	def self.smart_encode(str)
+		return str.gsub(/[^-a-z\/:?&_.~#]+/i) { |m|
+			URI.encode(m)
+		}
+	end
+
+	def self.smart_decode(str)
+		return str.gsub(/(%[0-9ABCDEF]{2})+/i) { |m|
+			URI.decode(m)
+		}
+	end
+end
+
 
 book = Book.new
 
@@ -676,19 +738,23 @@ book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
-book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'	# здесь глючная ссылка
-#book.add_source 'http://top-fwz1.mail.ru/counter2?js=na;id=77689'	# (это и есть глючная ссылка)
+
+#book.add_source 'http://opennet.ru'
+#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
 #book.add_source 'https://ru.wikipedia.org'
 #book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+# насекомые:
+#book.add_source 'https://ru.wikipedia.org/wiki/%D0%9D%D0%B0%D1%81%D0%B5%D0%BA%D0%BE%D0%BC%D1%8B%D0%B5'
+# уховёртка:
+#book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1%80%D1%82%D0%BA%D0%B0_%D0%BE%D0%B1%D1%8B%D0%BA%D0%BD%D0%BE%D0%B2%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 1
+book.page_limit = 5
 
-book.threads = 1
+book.threads = 2
 
 book.prepare
 book.save
