@@ -315,7 +315,7 @@ class Book
 			@current_host = the_uri.host
 			@current_scheme = the_uri.scheme
 			@current_rule = @book.get_rule(@current_uri.to_s)
-				#Msg::debug " @current_rule: #{@current_rule}"
+				Msg::debug " @current_rule: #{@current_rule}"
 			
 			@file_path = @book.uri2file_path(text: @current_uri)
 			@file_name = File.basename(@file_path)
@@ -328,7 +328,7 @@ class Book
 			
 				Msg::debug '---------------------------------'
 			@page = get_page(@current_uri)
-			@title = get_title(@page)
+			@title = detect_title(@page)
 			
 			result_page = @current_rule.process_page(@page)
 				
@@ -494,7 +494,7 @@ class Book
 			return dom
 		end
 		
-		def get_title(dom)
+		def detect_title(dom)
 			#Msg::debug("#{self.class}.#{__method__}()")
 			
 			title = dom.search('//title').text
@@ -752,7 +752,8 @@ book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 5
+book.page_limit = 1
+book.error_limit = 1
 
 book.threads = 2
 

@@ -1,36 +1,23 @@
 #coding: UTF-8
 
 class DefaultSite
-	def link_aliases
-		{ 
-			any_page: '^.+$',
-		}
-	end
-
-	def rules
-		{
-			any_page: {
-				processor: :AnyPage,
-				links: [],
-			},
-		}
-	end
 		
 	def initialize(uri)
 		#Msg::debug "#{self.class}.#{__method__}('#{uri}')"
 		
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
-		@rules = rules
 		
-		@current_rule = get_rule(uri)
-				
-		@image_whitelist = prepare_filter(image_whitelist)
-		@image_blacklist = prepare_filter(image_blacklist)
+		@page_rule = get_rule(uri)
 		
-		@links_filter = @current_rule[:links]
-			#Msg::debug "links_filter: #{@links_filter}"
+		@filters = @page_rule.fetch(:filters,[])
 		
-		@links_limit = @current_rule.fetch(:links_limit,nil)
+		@image_whitelist = prepare_wb_list(image_whitelist)
+		@image_blacklist = prepare_wb_list(image_blacklist)
+		
+		@links = @page_rule[:links]
+			#Msg::debug "links: #{@links}"
+		
+		@links_limit = @page_rule.fetch(:links_limit,nil)
 			#Msg::debug "links_limit: #{@links_limit}"
 		
 		@links_accepted = 0
@@ -45,7 +32,7 @@ class DefaultSite
 		if @links_limit && @links_accepted >= @links_limit then
 			return false
 		else
-			if @links_filter.include?(link_alias) then
+			if @links.include?(link_alias) then
 				@links_accepted += 1
 				return true
 			else
@@ -75,8 +62,8 @@ class DefaultSite
 	def redirect(uri)
 		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
-		if @current_rule.has_key?(:redirect) then
-			new_uri = @current_rule[:redirect].call(uri)
+		if @page_rule.has_key?(:redirect) then
+			new_uri = @page_rule[:redirect].call(uri)
 				Msg::grey " программное перенаправлние на '#{new_uri}'"
 			new_uri
 		else
@@ -84,14 +71,39 @@ class DefaultSite
 		end
 	end
 
-	def process_page(page)
-		self.send(@current_rule[:processor], page)
+	def process_page(dom)
+		# главный обработчик страницы
+		self.send(@page_rule[:processor], dom)
+		
+		# фильтры страницы
+		@filters.each { |filter_name|
+			if self.class.private_method_defined?(filter_name) then
+				self.send(filter_name,dom)
+			else
+				dom
+			end
+		}
+		
+		return dom
 	end
-
-	
 
 
 	private
+	
+	def link_aliases
+		{ 
+			any_page: '^.+$',
+		}
+	end
+
+	def rules
+		{
+			any_page: {
+				processor: :AnyPage,
+				links: [],
+			},
+		}
+	end
 	
 	def image_whitelist
 		[ '.*' ]
@@ -107,18 +119,22 @@ class DefaultSite
 		]
 	end
 
-	# Служебные методы
-	def prepare_filter(list)
+	
+	## Служебные методы
+
+	# методы-подготовщики
+	def prepare_wb_list(list)
 		list = list.flatten.sort_by{|pat| pat.length}.reverse
 		list = list.map{|pat| Regexp.new(pat)}
 		Regexp.union(list)
 	end
-	
+		
+	# методы-слуги
 	def get_rule(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		link_alias = uri2alias(uri)
-			Msg::debug " псевдоним сылки: #{link_alias}"
+			#Msg::debug " псевдоним сылки: #{link_alias}"
 		
 		rule = name2rule(link_alias)
 			#Msg::debug " правило: #{rule}"
@@ -144,13 +160,36 @@ class DefaultSite
 	end
 
 	def name2rule(name)
-		Msg::debug "#{self.class}.#{__method__}('#{name}'))"
+		#Msg::debug "#{self.class}.#{__method__}('#{name}'))"
 		
-		@rules[name.to_sym]
+		rules[name.to_sym]
 	end
 
-	# Страничные методы
+	
+	## Методы-обработчики
+
+	# страничные методы
 	def AnyPage(dom)
 		dom.search('//body')
+	end
+	
+	# фильтры
+	def RemoveTag(dom,tag_name)
+		dom.search("//#{tag_name}").each { |s|
+			s.remove
+		}
+		return dom
+	end
+	
+	def RemoveScripts(dom)
+		Msg::debug "#{self.class}.#{__method__}())"
+		
+		RemoveTag(dom,'script')
+	end
+	
+	def RemoveNoscripts(dom)
+		Msg::debug "#{self.class}.#{__method__}())"
+		
+		RemoveTag(dom,'noscript')
 	end
 end

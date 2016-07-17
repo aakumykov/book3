@@ -22,13 +22,14 @@ class RuWikipediaOrg < DefaultSite
 				links: [ :an_article ]
 			},
 			an_article: {
-				processor: :AnArticle,
-				links: [ :an_article ],
-				links_limit: 5,
 				redirect: lambda { |uri| 
 					title = uri.match(link_aliases[:an_article])[:title]
 					"https://ru.wikipedia.org/w/index.php?title=#{title}&printable=yes"
 				},
+				processor: :AnArticle,
+				filters: [ :RemoveScripts, :RemoveNoscripts ],
+				links: [ :an_article ],
+				links_limit: 5,
 			},
 			printable_article: {
 				processor: :AnArticle,
