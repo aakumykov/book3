@@ -252,7 +252,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		#Msg::debug("#{self.class}.#{__method__}(#{params})")
+		Msg::debug "#{self.class}.#{__method__}(#{params})"
 		
 		condition = params[:where]
 		data = params[:set]
@@ -346,6 +346,8 @@ class Book
 			uri = URI(uri)
 			
 			@current_uri = uri.to_s
+			
+			@human_uri = URI.smart_decode(@current_uri)
 			
 			@current_host = uri.host
 			
@@ -450,7 +452,9 @@ class Book
 				else
 					return result
 				end
+			
 			when Net::HTTPRedirection
+			
 				location = response['location']
 					Msg::notice " http-перенаправление на '#{location}'"
 				
@@ -459,11 +463,13 @@ class Book
 					mode: mode,
 					redirects_limit: (redirects_limit-1),
 				})
-			when Net::HTTPNotFound
-				Msg::warning "404: страница не найдена: '#{URI.smart_decode(uri)}' "
-				return nil
+			
 			else
-				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
+				@book.link_update(
+					set: {status: "error_#{response.code}" }, 
+					where: {id: @current_id}
+				)
+				raise " неприемлемый ответ сервера (#{response.code}, #{response.message}) для '#{@human_uri}' "
 				return nil
 			end
 		end
@@ -777,15 +783,17 @@ when 0
 	#book.add_source 'https://ru.wikipedia.org'
 	#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-	#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 	
 	# с ошибками
 	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
-	book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
+	#book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
 	
-	book.threads = 1
-	book.page_limit = 1
-	book.error_limit = 1
+	book.threads = 10
+	
+	book.page_limit = 100
+	
+	book.error_limit = 5
 else
 	ARGV.each { |uri| book.add_source(uri) }
 	
