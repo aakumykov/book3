@@ -431,18 +431,11 @@ class Book
 
 
 			response = http.request(request)
+			
+				#Msg::cyan response
 
 			case response
-			when Net::HTTPRedirection then
-				location = response['location']
-					Msg::notice " http-перенаправление на '#{location}'"
-				
-				result =  send(__method__, {
-					uri: location, 
-					mode: mode,
-					redirects_limit: (redirects_limit-1),
-				})
-			when Net::HTTPSuccess then
+			when Net::HTTPSuccess
 				
 					#Msg::debug "response keys: #{response.to_h.keys}"
 			
@@ -456,6 +449,18 @@ class Book
 				else
 					return result
 				end
+			when Net::HTTPRedirection
+				location = response['location']
+					Msg::notice " http-перенаправление на '#{location}'"
+				
+				result =  send(__method__, {
+					uri: location, 
+					mode: mode,
+					redirects_limit: (redirects_limit-1),
+				})
+			when Net::HTTPNotFound
+				Msg::warning "404: страница не найдена: '#{URI.smart_decode(uri)}' "
+				return nil
 			else
 				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
 				return nil
@@ -703,7 +708,6 @@ class Msg
 	end
 	
 	def self.warning(*msg)
-		STDERR.puts "ВНИМАНИЕ:".red
 		self.prepare_msg(msg).each {|m|
 			STDERR.puts m.to_s.red
 		}
@@ -741,14 +745,15 @@ end
 
 module URI
 	def self.smart_encode(str)
+		str = str.to_s
 		str = URI.smart_decode(str)
-		
 		return str.gsub(/[^-a-z\/:?&_.~#]+/i) { |m|
 			URI.encode(m)
 		}
 	end
 
 	def self.smart_decode(str)
+		str = str.to_s
 		return str.gsub(/(%[0-9ABCDEF]{2})+/i) { |m|
 			URI.decode(m)
 		}
@@ -774,7 +779,7 @@ when 0
 	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 	
 	# с ошибками
-	book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
+	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
 	book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
 	
 	book.threads = 1
