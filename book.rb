@@ -156,7 +156,7 @@ class Book
 			}
 		end
 		
-		puts "Подготовка завершена"
+		Msg::debug "Подготовка завершена"
 	end
 
 	def prepare_complete?
@@ -755,34 +755,41 @@ module URI
 	end
 end
 
+
 $DEBUG = false
 
 book = Book.new
-
 book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
+case ARGV.count
+when 0
+	#book.add_source 'http://opennet.ru'
+	#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
-#book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+	#book.add_source 'https://ru.wikipedia.org'
+	#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-#book.add_source 'https://ru.wikipedia.org'
-#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
-# насекомые:
-#book.add_source 'https://ru.wikipedia.org/wiki/%D0%9D%D0%B0%D1%81%D0%B5%D0%BA%D0%BE%D0%BC%D1%8B%D0%B5'
-# уховёртка:
-#book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1%80%D1%82%D0%BA%D0%B0_%D0%BE%D0%B1%D1%8B%D0%BA%D0%BD%D0%BE%D0%B2%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F'
-#book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
-
-book.threads = 1
-
-book.page_limit = 10
-#book.error_limit = 5
+	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	
+	# с ошибками
+	book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
+	book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
+	
+	book.threads = 1
+	book.page_limit = 3
+	#book.error_limit = 5
+else
+	ARGV.each { |uri| book.add_source(uri) }
+	
+	book.page_limit=ARGV.count
+	
+	book.threads=1
+end
 
 book.prepare
 book.save
 
-puts ''
-puts book.inspect
+Msg::debug ''
+Msg::debug book.inspect
