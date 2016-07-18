@@ -35,7 +35,7 @@ class Book
 		@language = 'ru'
 		
 		# Для скачивания Википедии в заголовок необходимо вставлять контактную информацию
-		raise "Не найден файл контактов (#{@@contacts_file})" if ! File.exists?(@@contacts_file)
+		raise "Создайте файл '#{@@contacts_file}' с вашим адресом электронной точты (нужно для скачивания Википедии)" if ! File.exists?(@@contacts_file)
 		@contacts = File.read(@@contacts_file)
 
 		@source = []
