@@ -11,7 +11,7 @@ require 'colorize'
 class Book
 	# пользовательское
 	attr_reader :title, :author, :language
-	attr_accessor :page_limit, :error_limit, :depth_limit
+	attr_accessor :error_limit, :depth_limit
 	
 	# внутреннее
 	attr_accessor :page_count
@@ -101,6 +101,10 @@ class Book
 		@language = a_language
 	end
 
+	def page_limit=(n)
+		@page_limit=n
+		@error_limit=n
+	end
 
 	def threads=(n)
 		@@threads_count = n if n.to_i.to_s==n.to_s
@@ -736,6 +740,8 @@ end
 
 module URI
 	def self.smart_encode(str)
+		str = URI.smart_decode(str)
+		
 		return str.gsub(/[^-a-z\/:?&_.~#]+/i) { |m|
 			URI.encode(m)
 		}
@@ -769,11 +775,10 @@ book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1%80%D1%82%D0%BA%D0%B0_%D0%BE%D0%B1%D1%8B%D0%BA%D0%BD%D0%BE%D0%B2%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
+book.threads = 1
 
-book.page_limit = 100
-book.error_limit = 5
-
-book.threads = 2
+book.page_limit = 1
+#book.error_limit = 5
 
 book.prepare
 book.save
