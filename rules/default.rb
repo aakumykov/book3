@@ -3,12 +3,12 @@
 class DefaultSite
 		
 	def initialize(uri)
-		Msg::cyan "#{self.class}.#{__method__}('#{uri}')"
+		#Msg::cyan "#{self.class}.#{__method__}('#{uri}')"
 		
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
 		@page_rule = get_rule(uri)
-			Msg::cyan " page_rule: #{@page_rule}"
+			#Msg::cyan " page_rule: #{@page_rule}"
 		
 		@filters = @page_rule.fetch(:filters,[])
 		
@@ -65,7 +65,7 @@ class DefaultSite
 		
 		if @page_rule.has_key?(:redirect) then
 			new_uri = @page_rule[:redirect].call(uri)
-				Msg::grey " программное перенаправлние на '#{new_uri}'"
+				Msg::debug " программное перенаправлние на '#{new_uri}'"
 			new_uri
 		else
 			uri
@@ -75,7 +75,7 @@ class DefaultSite
 	def process_page(dom)
 		# главный обработчик страницы
 		self.send(@page_rule[:processor], dom)
-			Msg::cyan "страницу обрабатывает '#{self.class}.#{@page_rule[:processor]}()'"
+			#Msg::cyan "страницу обрабатывает '#{self.class}.#{@page_rule[:processor]}()'"
 		
 		# фильтры страницы
 		@filters.each { |filter_name|

@@ -209,7 +209,7 @@ class Book
 	end
 
 	def get_rule(uri)
-		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		require "./#{@@rules_dir}/default.rb" if not Object.const_defined? :DefaultSite
 		
@@ -217,7 +217,7 @@ class Book
 		file_name = host.gsub('.','_') + '.rb'
 		class_name = host.split('.').map{|c| c.capitalize }.join
 		
-			#Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
+			Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
 		
 		case host
 		when 'opennet.ru'
@@ -228,7 +228,7 @@ class Book
 			rule = Object.const_get(class_name).new(uri)
 		else
 			require "./#{@@rules_dir}/default.rb"
-			rule = Object.const_get(:Default).new(uri)
+			rule = Object.const_get(:DefaultSite).new(uri)
 		end
 	end
 
@@ -356,7 +356,7 @@ class Book
 		end
 		
 		def get_page(uri)
-			Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+			Msg::info("#{self.class}.#{__method__}('#{uri}')")
 			
 			new_uri = @current_rule.redirect(uri)
 			
@@ -674,7 +674,7 @@ class Msg
 	#~ end
 	
 	def self.debug(msg)
-		puts msg.to_s
+		puts msg.to_s if $DEBUG
 	end
 	
 	def self.green(msg)
@@ -748,6 +748,7 @@ module URI
 	end
 end
 
+$DEBUG = false
 
 book = Book.new
 
@@ -769,10 +770,10 @@ book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 5
+book.page_limit = 100
 book.error_limit = 5
 
-book.threads = 5
+book.threads = 2
 
 book.prepare
 book.save
