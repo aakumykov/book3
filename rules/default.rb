@@ -3,11 +3,12 @@
 class DefaultSite
 		
 	def initialize(uri)
-		#Msg::debug "#{self.class}.#{__method__}('#{uri}')"
+		Msg::cyan "#{self.class}.#{__method__}('#{uri}')"
 		
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
 		@page_rule = get_rule(uri)
+			Msg::cyan " page_rule: #{@page_rule}"
 		
 		@filters = @page_rule.fetch(:filters,[])
 		

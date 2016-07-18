@@ -28,7 +28,7 @@ class Book
 	@@threads_count = 3
 
 	def initialize
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 	
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
@@ -123,8 +123,8 @@ class Book
 			threads = []
 			
 			links = get_fresh_links
-				#Msg::cyan "fresh links: #{links}"
-				Msg::debug "Ссылок на цикл: #{links.count}"
+				#Msg::debug "fresh links: #{links}"
+				#Msg::debug "Ссылок на цикл: #{links.count}"
 			
 			links.each do |row|
 				id = row[:id]
@@ -186,7 +186,7 @@ class Book
 	end
 	
 	def get_fresh_links
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 		
 		res = @@db.query("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
 		
@@ -303,30 +303,21 @@ class Book
 		
 	class Processor
 		
-		def initialize(book, id, uri)
-			#Msg::debug("#{self.class}.#{__method__}(#{id}, '#{uri}')")
+		def initialize(the_book, id, uri)
+			Msg::debug("#{self.class}.#{__method__}(#{the_book}, #{id}, '#{uri}')")
 			
-			the_uri = URI(uri)
-			
-			@book = book
+			@book = the_book
 			
 			@current_id = id
-			@current_uri = uri
-			@current_host = the_uri.host
-			@current_scheme = the_uri.scheme
-			@current_rule = @book.get_rule(@current_uri.to_s)
-				Msg::debug " @current_rule: #{@current_rule}"
 			
-			@file_path = @book.uri2file_path(text: @current_uri)
-			@file_name = File.basename(@file_path)
-
-				#Msg::debug(" rule: #{@current_rule.class}")
+			consume_uri (uri)
 		end
 		
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 				Msg::debug '---------------------------------'
+			
 			@page = get_page(@current_uri)
 			@title = detect_title(@page)
 			
@@ -344,10 +335,36 @@ class Book
 			return @current_id
 		end
 		
+		def consume_uri(uri)
+			#Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+			
+			uri = URI(uri)
+			
+			@current_uri = uri.to_s
+			
+			@current_host = uri.host
+			
+			@current_scheme = uri.scheme
+			
+			@current_rule = @book.get_rule(@current_uri)
+			
+				#Msg::debug " #{self.class}.@current_rule: #{@current_rule}"
+			
+			@file_path = @book.uri2file_path(text: @current_uri)
+			
+			@file_name = File.basename(@file_path)
+		end
+		
 		def get_page(uri)
 			Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
-			uri = @current_rule.redirect(uri)
+			new_uri = @current_rule.redirect(uri)
+			
+			if new_uri != uri then
+				#Msg::debug " новая ссылка '#{new_uri}'"
+				consume_uri(new_uri)
+				uri = new_uri
+			end
 			
 			data = download(uri: uri)
 			
@@ -378,7 +395,7 @@ class Book
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			#Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
+			Msg::debug("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 				#Msg::debug " uri: #{uri}"
 				#Msg::debug " mode: #{mode}"

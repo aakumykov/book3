@@ -26,18 +26,12 @@ class RuWikipediaOrg < DefaultSite
 					title = uri.match(link_aliases[:an_article])[:title]
 					"https://ru.wikipedia.org/w/index.php?title=#{title}&printable=yes"
 				},
-				processor: :AnArticle,
+			},
+			printable_article: {
+				processor: :PrintableArticle,
 				filters: [ :RemoveScripts, :RemoveNoscripts, :RemoveNavigation ],
 				links: [ :an_article ],
 				links_limit: 5,
-			},
-			printable_article: {
-				processor: :AnArticle,
-				links: [],
-			},
-			any_page: {
-				processor: :AnyPage,
-				links: [],
 			},
 		}.merge(super)
 	end
@@ -62,7 +56,7 @@ class RuWikipediaOrg < DefaultSite
 		dom.search("//div[@id='content']")
 	end
 
-	def AnArticle(dom)
+	def PrintableArticle(dom)
 		#MainPage(dom)
 		dom.search("//div[@id='content']")
 		return dom
