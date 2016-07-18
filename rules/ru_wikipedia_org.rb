@@ -30,8 +30,10 @@ class RuWikipediaOrg < DefaultSite
 			printable_article: {
 				processor: :PrintableArticle,
 				filters: [ :RemoveScripts, :RemoveNoscripts, :RemoveNavigation ],
-				links: [ :an_article ],
-				links_limit: 5,
+				links: {
+					list: [:an_article ],
+					limit: 5,
+				}
 			},
 		}.merge(super)
 	end

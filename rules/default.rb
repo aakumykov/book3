@@ -15,10 +15,10 @@ class DefaultSite
 		@image_whitelist = prepare_wb_list(image_whitelist)
 		@image_blacklist = prepare_wb_list(image_blacklist)
 		
-		@links = @page_rule[:links]
+		@links = @page_rule.fetch(:links,{}).fetch(:list,[])
 			#Msg::debug "links: #{@links}"
 		
-		@links_limit = @page_rule.fetch(:links_limit,nil)
+		@links_limit = @page_rule.fetch(:links,{}).fetch(:limit,nil)
 			#Msg::debug "links_limit: #{@links_limit}"
 		
 		@links_accepted = 0
