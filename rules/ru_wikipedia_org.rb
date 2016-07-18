@@ -29,7 +29,11 @@ class RuWikipediaOrg < DefaultSite
 			},
 			printable_article: {
 				processor: :PrintableArticle,
-				filters: [ :RemoveScripts, :RemoveNoscripts, :RemoveNavigation ],
+				filters: [ 
+					:RemoveScripts, 
+					:RemoveNoscripts, 
+					:RemoveNavigation 
+				],
 				links: {
 					list: [:an_article ],
 					limit: 5,
@@ -66,11 +70,23 @@ class RuWikipediaOrg < DefaultSite
 	
 	# страничные фильтры
 	def RemoveNavigation(dom)
-		dom.search("//div[@id='mw-navigation']").remove
-		dom.search("//table[@class='navbox']").remove
-		
-		dom.search("//div[@id='mw-hidden-catlinks']").remove
-		dom.search("//div[@id='mw-normal-catlinks']").remove		
+		[
+			"//div[@id='mw-navigation']",
+			"//table[@class='navbox']",
+			"//table[contains(@class,'navigation-box')]",
+			
+			"//div[@id='mw-hidden-catlinks']",
+			"//div[@id='mw-normal-catlinks']",	
+			
+			"//*[@id='footer-places']",
+			"//*[@id='footer-icons']",
+			
+			"//span[@class='mw-editsection']",
+			
+			"//div[@class='mw-indicators']",
+		].each { |xpath|
+			dom.search(xpath).remove
+		}
 		
 		return dom
 	end

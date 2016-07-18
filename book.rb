@@ -705,9 +705,9 @@ class Msg
 	end
 	
 	def self.error(*msg)
-		STDERR.puts "ОШИБКА:".black.on_red
+		STDERR.puts "ОШИБКА:".light_white.on_red
 		self.prepare_msg(msg).each {|m|
-			STDERR.puts m.to_s.black.on_red
+			STDERR.puts m.to_s.light_white.on_red
 		}
 	end
 	
@@ -769,10 +769,10 @@ book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 #book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
 
 
-book.page_limit = 1
-book.error_limit = 1
+book.page_limit = 5
+book.error_limit = 5
 
-book.threads = 2
+book.threads = 5
 
 book.prepare
 book.save
