@@ -360,7 +360,9 @@ class Book
 		end
 		
 		def get_page(uri)
-			Msg::info("#{self.class}.#{__method__}('#{uri}')")
+			#Msg::info("#{self.class}.#{__method__}('#{uri}')")
+			
+				Msg::green "загрузка '#{URI.smart_decode(uri)}'"
 			
 			new_uri = @current_rule.redirect(uri)
 			
@@ -529,16 +531,15 @@ class Book
 			links = dom.search('//a').map { |a| a[:href] }.compact
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
-				
 				#Msg::debug " всего ссылок: #{links.count}"
 				
 			links = links.uniq
-				
 				#Msg::debug " уникальных: #{links.count}"
 			
-			links_hash = links.map { |lnk| 
+			links_hash = links.map { |lnk|
 				begin
-					[lnk, complete_uri(lnk)]
+					lnk = URI.smart_encode(lnk)
+					[ lnk, complete_uri(lnk) ]
 				rescue => e
 					Msg::notice "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
@@ -777,7 +778,7 @@ book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 
 book.threads = 1
 
-book.page_limit = 1
+book.page_limit = 10
 #book.error_limit = 5
 
 book.prepare
