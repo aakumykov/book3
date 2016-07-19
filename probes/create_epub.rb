@@ -5,6 +5,8 @@ system 'clear'
 require 'sqlite3'
 require 'securerandom'
 require 'awesome_print'
+require 'find'
+require 'zip'
 
 
 def show_usage
@@ -29,7 +31,6 @@ class Book
 		
 		@db = SQLite3::Database.new db_file
 		@db.results_as_hash = true
-		
 		@table_name = 'links'
 	end
 
@@ -44,8 +45,8 @@ class Book
 			
 			res.each { |row|
 				list << {
-					:id => row['id'],
-					:parent_id => row['parent_id'],
+					:id => Digest::MD5.hexdigest(row['id'].to_s),
+					:parent_id => row['parent_id'].to_s,
 					:title => row['title'],
 					:file => row['file'],
 					:uri => row['uri'],
@@ -59,8 +60,11 @@ class Book
 		return get_toc_items(parent_id: 0)
 	end
 
-	def create_epub (output_file, book_array, metadata)
+	def create_epub (source_dir, output_file, book_array, metadata)
 		Msg.info "#{__method__}('#{output_file}')"
+		
+		@metadata = metadata
+		@text_dir = 'text'
 		
 		#puts "\n=================================== book_array =================================="
 		#ap book_array
@@ -78,11 +82,13 @@ class Book
 					#puts "===================== item ========================"
 					#ap item
 					
-					id = Digest::MD5.hexdigest(item[:id])
+					id = Digest::MD5.hexdigest(item[:id].to_s)
 					
 					if not item[:childs].empty? then
 						
 						dir_id = SecureRandom.uuid
+						
+							#puts "#{@text_dir}/#{item[:file]}"
 					
 						navPoints += <<NCX
 <navPoint id='#{dir_id}'>
@@ -126,6 +132,10 @@ NCX
 
 
 			nav_data = MakeNavPoint(arg[:book_array],0)
+			
+				puts "------------------------- nav_data --------------------------"
+				ap nav_data
+			
 			metadata = arg[:metadata]
 
 			ncx = <<NCX_DATA
@@ -160,7 +170,7 @@ NCX_DATA
 				output = ''
 				
 				book_array.each{ |item|
-					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id].to_s)
 					output += <<MANIFEST
 	<item href='#{@text_dir}/#{item[:file]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
@@ -177,7 +187,7 @@ MANIFEST
 				output = ''
 
 				book_array.each { |item|
-					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id].to_s)
 					output += "\n\t<itemref idref='#{id}' />";
 					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
 				}
@@ -232,6 +242,7 @@ OPF_DATA
 		def createZipFile(zip_file, source_path)
 			Msg.info "#{__method__}(#{zip_file},#{source_path})"
 			Find.find(source_path) do |input_item|
+				#Msg::debug input_item
 				Zip::File.open(zip_file, Zip::File::CREATE) do |zipfile|
 					virtual_item = input_item.strip.gsub( source_path, '' ).gsub(/^[\/]*/,'')
 					next if virtual_item.empty?
@@ -242,10 +253,10 @@ OPF_DATA
 		
 		
 		# создание дерева каталогов под epub-книгу
-		epub_dir = @book_dir + '/' + 'epub'
-		meta_dir = epub_dir + '/META-INF'
-		oebps_dir = epub_dir + '/OEBPS'
-		oebps_text_dir = oebps_dir + '/Text'
+		epub_dir = source_dir
+		meta_dir = File.join(epub_dir, 'META-INF')
+		oebps_dir = File.join(epub_dir, 'OEBPS')
+		oebps_text_dir = File.join(oebps_dir, 'text')
 		
 		#~ begin
 			#~ FileUtils.rm_rf(epub_dir)
@@ -256,8 +267,9 @@ OPF_DATA
 		Dir.mkdir(epub_dir) if not Dir.exists?(epub_dir)
 		Dir.mkdir(meta_dir) if not Dir.exists?(meta_dir)
 		Dir.mkdir(oebps_dir) if not Dir.exists?(oebps_dir)
-		Dir.mkdir(oebps_text_dir) if not Dir.exists?(oebps_text_dir)
-		
+		#Dir.mkdir(oebps_text_dir) if not Dir.exists?(oebps_text_dir)
+		#system "tree #{epub_dir}"
+
 		# создание служебных(?) файлов
 		File.open(epub_dir + '/mimetype','w') { |file|
 			file.write('application/epub+zip')
@@ -285,15 +297,28 @@ DATA
 			file.write(opfData)
 		}
 		
-		Msg.debug "\n=================================== NCX =================================="
-		Msg.debug ncxData
-		Msg.debug "\n=================================== OPF =================================="
-		Msg.debug opfData
+		#Msg.debug "\n=================================== NCX =================================="
+		#Msg.debug ncxData
+		#Msg.debug "\n=================================== OPF =================================="
+		#Msg.debug opfData
 		
 		# Перемещаю html-файлы в дерево EPUB
-		Dir.entries(@book_dir).each { |file_name|
-			File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
-		}
+		#Dir.entries(@book_dir).each { |file_name|
+		#	File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
+		#}
+		
+		source_text_dir = File.join(epub_dir,@text_dir)
+		source_images_dir = File.join(epub_dir,'images')
+		
+		File.rename(
+			source_text_dir, 
+			File.join(oebps_text_dir)
+		) if File.exists? source_text_dir
+		
+		#~ File.rename(
+			#~ source_images_dir, 
+			#~ File.join(oebps_dir, 'images')
+		#~ ) if File.exists? source_images_dir
 		
 		# Создаю EPUB-файл
 		createZipFile( output_file, epub_dir + '/')
@@ -374,3 +399,4 @@ metadata = {
 	generator_version: '0.0.1-азъ0',
 }
 
+book.create_epub(source_dir, 'book3.epub', book_array, metadata)
