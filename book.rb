@@ -777,24 +777,27 @@ book.language = 'ru'
 
 case ARGV.count
 when 0
-	#book.add_source 'http://opennet.ru'
+	Msg::info "режим внутреннего источника"
+	book.add_source 'http://opennet.ru'
 	#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
 	#book.add_source 'https://ru.wikipedia.org'
 	#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 	
 	# с ошибками
 	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
 	#book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
 	
-	book.threads = 10
+	book.threads = 1
 	
-	book.page_limit = 100
+	book.page_limit = 1
 	
-	book.error_limit = 5
+	book.error_limit = 1
 else
+	Msg::info "режим внешнего источника"
+	
 	ARGV.each { |uri| book.add_source(uri) }
 	
 	book.page_limit=ARGV.count

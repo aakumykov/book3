@@ -15,11 +15,15 @@ class OpennetRu < DefaultSite
 		{
 			main_page: {
 				processor: :MainPage,
-				links: [ :news_article ],
+				links: {
+					list: [ :news_article ],
+				},
 			},
 			news_article: {
 				processor: :NewsArticle,
-				links: [],
+				links: {
+					list: [],
+				},
 			},
 		}.merge(super)
 	end
