@@ -10,16 +10,14 @@ class DefaultSite
 		@page_rule = get_rule(uri)
 			Msg::debug " page_rule: #{@page_rule}"
 		
-		@filters = @page_rule.fetch(:filters,[])
+		@filters = @page_rule[:filters] || []
 		
 		@image_whitelist = prepare_wb_list(image_whitelist)
 		@image_blacklist = prepare_wb_list(image_blacklist)
 		
-		@links = @page_rule.fetch(:links,{}).fetch(:list,[])
-			#Msg::debug "links: #{@links}"
-		
-		@links_limit = @page_rule.fetch(:links,{}).fetch(:limit,nil)
-			#Msg::debug "links_limit: #{@links_limit}"
+		links_def = @page_rule[:links] || {}
+		@links = links_def[:list] || []
+		@links_limit = links_def[:limit] || nil
 		
 		@links_accepted = 0
 			#Msg::debug "links_accepted: #{@links_accepted}"

@@ -21,9 +21,6 @@ class OpennetRu < DefaultSite
 			},
 			news_article: {
 				processor: :NewsArticle,
-				links: {
-					list: [],
-				},
 			},
 		}.merge(super)
 	end
