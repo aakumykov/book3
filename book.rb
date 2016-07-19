@@ -15,7 +15,7 @@ class Book
 	
 	# внутреннее
 	attr_accessor :page_count
-	attr_reader :text_dir, :images_dir, :contacts
+	attr_reader :text_dir, :image_dir, :contacts
 
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'links'
@@ -518,8 +518,15 @@ class Book
 				# сохраняю картинку в файл
 				begin
 					File.write(file_path, data[:data])
-					img[:src] = file_path
-					#img[:src] = uri # для настройки чёрного списка
+
+					related_path = File.join(
+						'..',
+						File.basename(@book.image_dir),
+						File.basename(file_path)
+					)
+						#Msg::info "image related path: #{related_path}"
+
+					img[:src] = related_path
 				rescue => e
 					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
 					next
