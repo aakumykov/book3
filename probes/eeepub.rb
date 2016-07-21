@@ -29,14 +29,12 @@ epub = EeePub.make do
   files [
 	"#{source_dir}/text/1.html",
 	"#{source_dir}/text/2.html",
-	"#{source_dir}/text/3.html",
 	]
   nav [
     {:label => 'Linux', :content => '1.html', :nav => [
       {:label => 'Unix', :content => '1.html#Unix'}
     ]},
     {:label => 'Википедия', :content => '2.html'},
-    {:label => 'Opennet', :content => '3.html'},
   ]
 end
 epub.save('test3.epub')
