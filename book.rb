@@ -789,19 +789,17 @@ when 0
 	#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
 	#book.add_source 'https://ru.wikipedia.org'
-	#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
+	book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-	#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 	
 	# с ошибками
 	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
 	#book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
 	
 	book.threads = 1
-	
-	book.page_limit = 1
-	
-	book.error_limit = 1
+	book.page_limit = 3
+	book.error_limit = 3
 else
 	Msg::info "режим внешнего источника"
 	

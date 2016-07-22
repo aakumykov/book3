@@ -1,6 +1,9 @@
+tmp/
 *.sqlite*
 *.swp
-tmp/
+
 contacts4header.txt
+
+*.epub
 probes/*.epub
 

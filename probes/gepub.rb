@@ -1,46 +1,59 @@
 #!/usr/bin/env ruby
-#coding: utf-8
+# -*- coding: utf-8 -*-
 system 'clear'
 
 require 'gepub'
 require 'fileutils'
 
-builder = GEPUB::Builder.new {
-  language 'en'
-  unique_identifier 'http:/example.jp/bookid_in_url', 'BookID', 'URL'
-  title 'GEPUB Sample Book'
-  subtitle 'This book is just a sample'
+book = GEPUB::Book.new
+book.set_primary_identifier('http:/example.jp/bookid_in_url', 'BookID', 'URL')
+book.language = 'ru'
 
-  creator 'KOJIMA Satoshi'
-
-  contributors 'Denshobu', 'Asagaya Densho', 'Shonan Densho Teidan', 'eMagazine Torutaru'
-
-  date '2012-02-29T00:00:00Z'
-
-  resources(:workdir => '/home/andrey/разработка/ruby/book3/probes/tmp/') {
-#    cover_image 'img/image1.jpg' => 'image1.jpg'
-
-  	  ordered {
-	    file '1.html'
-    	heading 'Chapter 1'
-
-	    file '2.html'
-    	heading 'Chapter 2'
-
-		file '063636c2c8254b44bccc2baedaee9979.png'
-		file '34e2e8aa9540ec3adbf83cfbbe03a55c.png'
-		file '36d3c9a0a7aa52d8f220f4028fdad55b.png'
-		file '37b80cf6bf32e8f2e168db3392246b53.png'
-		file '5615e789c0cf14f79540511ffb5f48f1.png'
-		file '738bfb26116af254fe66954b216cf599.png'
-		file 'ab83b8fff73770c71a1aad60f5d27d2c.jpg'
-		file 'c829e0f3184fa1d80d464ee9fed5477d.png'
-		file 'd1873c5896da0387f719615b1094831b.gif'
-		file 'd309f365c4faaa1b06908ff93fe8c79c.jpg'
-		file 'e0566c5cd74ce5e1a06b0aed17d3b694.png'
-		file 'f4a61ddc44782a507bdc78b8b9bb05df.png'
-    }
-  }
+# you can add metadata and its property using block
+book.add_title('gepub test 2', nil, GEPUB::TITLE_TYPE::MAIN) {
+  |title|
+  title.lang = 'ru'
+  title.file_as = 'gepub test 2 file_as'
+  title.display_seq = 1
+  title.add_alternates(
+                       'jp' => 'gepub test 2 add_alternates (Japanese)',
+                       'en' => 'gepub test 2 add_alternates (English)')
 }
-epubname = File.join(File.dirname(__FILE__), 'example_test_with_builder.epub')
-builder.generate_epub(epubname)
+# you can do the same thing using method chain
+book.add_title('これはあくまでサンプルです',nil, GEPUB::TITLE_TYPE::SUBTITLE).set_display_seq(1).add_alternates('en' => 'this book is just a sample.')
+book.add_creator('Андрюха Кумыч') {
+  |creator|
+  creator.display_seq = 1
+  creator.add_alternates('en' => 'Andrey Kumykov')
+  creator.add_alternates('tr' => 'AHDPEi/l KYMblKOB')
+}
+book.add_contributor('OpennetRu').set_display_seq(1).add_alternates('ru' => 'Проект "Открытая сеть"')
+book.add_contributor('Википедия').set_display_seq(2).add_alternates('en' => 'Wikipedia Russia')
+
+File.open 'dragons_flight.jpg' do |io|
+	book.add_item('images/dragons_flight.jpg',io).cover_image
+end
+
+Dir.glob('tmp/images/*') do |external_img|
+	internal_img = external_img.gsub(/^[^\/]+\//,'')
+	File.open(external_img) do |io|
+		book.add_item(internal_img,io)
+		#puts "добавление '#{external_img}' как '#{internal_img}'"
+	end
+end
+
+# within ordered block, add_item will be added to spine.
+book.ordered {
+  book.add_item('text/wikipedia.xhtml').add_content('tmp/text/wikipedia.xhtml').toc_text('Википедия') 
+  book.add_item('text/linux.xhtml').add_content(StringIO.new(File.read('tmp/text/linux.xhtml'))).toc_text('Линукс') # do not appear on table of contents
+  book.add_item('tmp/text/opennet.xhtml').add_content(StringIO.new(File.read('tmp/text/opennet.xhtml'))).toc_text('OpenNET')
+  # to add nav file:
+  # book.add_item('path/to/nav').add_content(nav_html_content).add_property('nav')
+}
+epubname = File.join(File.dirname(__FILE__), 'example_test.epub')
+
+# if you do not specify your own nav document with add_item, 
+# simple navigation text will be generated in generate_epub.
+# auto-generated nav file will not appear on spine.
+book.generate_epub(epubname)
+
