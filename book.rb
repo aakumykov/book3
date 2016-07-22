@@ -282,7 +282,7 @@ class Book
 		when :text
 			dir = @text_dir
 			name = uri
-			ext = 'html'
+			ext = 'xhtml'
 		when :image
 			dir = @image_dir
 			name = uri
@@ -651,7 +651,7 @@ class Book
 		def save_page(title, body)
 			Msg::debug("#{self.class}.#{__method__}('#{title}')")
 			
-			data = body.to_html
+			data = body.to_xhtml
 			
 			File::write(@file_path, data) and Msg::debug " записан файл #{@file_name}"
 			
