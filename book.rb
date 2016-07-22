@@ -282,7 +282,7 @@ class Book
 		when :text
 			dir = @text_dir
 			name = uri
-			ext = 'xhtml'
+			ext = 'html'
 		when :image
 			dir = @image_dir
 			name = uri
@@ -652,24 +652,9 @@ class Book
 		def save_page(title, body)
 			Msg::debug("#{self.class}.#{__method__}('#{title}')")
 			
-			body = body.to_xhtml
+			data = body.to_html
 			
-			html = <<MARKUP
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ru" lang="ru">
-	<head>
-		<title>#{title}</title>
-		<meta http-equiv="content-type" content="text/html;charset=utf-8" />
-		<meta name="generator" content="Geany 1.24.1" />
-	</head>
-	<body>
-		#{body}
-	</body>
-</html>
-MARKUP
-			
-			File::write(@file_path, html) and Msg::debug " записан файл #{@file_name}"
+			File::write(@file_path, data) and Msg::debug " записан файл #{@file_name}"
 			
 			@book.link_update(
 				set: {title: @title, file: @file_name}, 
