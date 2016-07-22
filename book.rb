@@ -381,7 +381,7 @@ class Book
 				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
 				#File.write('page2.html', page)
 			
-			page = Nokogiri::HTML(page) { |config|
+			page = Nokogiri::XML(page) { |config|
 				config.nonet
 				config.noerror
 				config.noent
@@ -508,6 +508,7 @@ class Book
 				
 				# скачиваю картинку
 				begin
+					Msg::info " получаю картинку '#{File.basename(file_path)}'"
 					data = download(uri: uri)
 				rescue => e
 					Msg::warning "не удалось загрузить картинку '#{uri}' (#{e.message})"
