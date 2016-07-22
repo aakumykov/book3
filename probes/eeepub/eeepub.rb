@@ -12,11 +12,11 @@ epub = EeePub.make do
   identifier  'http://example.com/book/foo', :scheme => 'URL'
   uid         'http://example.com/book/foo'
 
-  #files ['/path/to/foo.html', '/path/to/bar.html'] # or files [{'/path/to/foo.html' => 'dest/dir'}, {'/path/to/bar.html' => 'dest/dir'}]
-  files [
-	  {'./tmp/text/1.html' => 'text/'}, 
-	  {'./tmp/text/2.html' => 'text/'}, 
-  ]
+  files ['./1.html', './2.html'] # or files [{'/path/to/foo.html' => 'dest/dir'}, {'/path/to/bar.html' => 'dest/dir'}]
+#  files [
+#	  {'./tmp/text/1.html' => 'text/'}, 
+#	  {'./tmp/text/2.html' => 'text/'}, 
+#  ]
 
 #  nav [
 #    {:label => '1. foo', :content => 'foo.html', :nav => [
