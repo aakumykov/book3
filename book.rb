@@ -386,7 +386,6 @@ class Book
 				config.noerror
 				config.noent
 			}
-				#File.write('page3.html', page.to_html)
 			
 			page
 		end

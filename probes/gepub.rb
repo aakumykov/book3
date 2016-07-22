@@ -5,6 +5,15 @@ system 'clear'
 require 'gepub'
 require 'fileutils'
 
+case ARGV.count
+when 1
+	source_dir = ARGV.first
+	workdir = File.dirname( File.expand_path(__FILE__) )
+else
+	$stderr.puts "Использование: #{__FILE__} <каталог-источник>"
+	exit 1
+end
+
 book = GEPUB::Book.new
 book.set_primary_identifier('http:/example.jp/bookid_in_url', 'BookID', 'URL')
 book.language = 'ru'
@@ -36,29 +45,33 @@ book.add_contributor('Википедия').set_display_seq(2).add_alternates('en
 #~ end
 
 # within ordered block, add_item will be added to spine.
-workdir = "tmp"
-Dir.glob("#{workdir}/text/*") do |external_txt_file|
-	internal_txt_file = external_txt_file.
+Dir.chdir(source_dir) and puts "текущий каталог: #{Dir.pwd}"
+
 book.ordered {
-	book.add_item('text/wikipedia.xhtml').add_content('tmp/text/wikipedia.xhtml').toc_text('Википедия') 
-	book.add_item('text/linux.xhtml').add_content(StringIO.new(File.read('tmp/text/linux.xhtml'))).toc_text('Линукс') # do not appear on table of contents
-	book.add_item('tmp/text/opennet.xhtml').add_content(StringIO.new(File.read('tmp/text/opennet.xhtml'))).toc_text('OpenNET')
-	# to add nav file:
-	# book.add_item('path/to/nav').add_content(nav_html_content).add_property('nav')
+
+	Dir.glob("text/*") do |txt_file|
+		book.add_item(txt_file).add_content(txt_file).toc_text(File.basename(txt_file))
+		puts "добавлен текст '#{txt_file}'"
+		# to add nav file:
+		# book.add_item('path/to/nav').add_content(nav_html_content).add_property('nav')
+	end
+
+	Dir.glob('images/*') do |img_file|
+		File.open(img_file) do |io|
+			book.add_item(img_file,io)
+			puts "добавлена картинка '#{img_file}'"
+		end
+	end
 }
 
-Dir.glob('tmp/images/*') do |external_img|
-	internal_img = external_img.gsub(/^[^\/]+\//,'')
-	File.open(external_img) do |io|
-		book.add_item(internal_img,io)
-		#puts "добавление '#{external_img}' как '#{internal_img}'"
-	end
-end
+Dir.chdir(workdir) and puts "текущий каталог: #{Dir.pwd}"
 
 epubname = File.join(File.dirname(__FILE__), 'example_test.epub')
+puts "имя EPUB-файла: #{epubname}"
 
 # if you do not specify your own nav document with add_item, 
 # simple navigation text will be generated in generate_epub.
 # auto-generated nav file will not appear on spine.
 book.generate_epub(epubname)
 
+puts "ГОТОВО!" if File.exists? epubname
