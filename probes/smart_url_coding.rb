@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #coding: utf-8
-system 'clear'
+#system 'clear'
 
 require 'uri'
 
@@ -13,17 +13,20 @@ end
 
 module URI
 	def self.smart_encode(str)
-		str.gsub(/[а-яА-Я ]+/) { |m|
+		str = URI.smart_decode(str)
+		
+		return str.gsub(/[^-a-z\/:?&_.~#]+/i) { |m|
 			URI.encode(m)
 		}
 	end
 
 	def self.smart_decode(str)
-		str.gsub(/(%[0-9ABCDEF]{2})+/i) { |m|
+		return str.gsub(/(%[0-9ABCDEF]{2})+/i) { |m|
 			URI.decode(m)
 		}
 	end
 end
+
 
 case ARGV.size
 when 1
@@ -33,9 +36,12 @@ else
 	exit 1
 end
 
-s = URI.smart_encode s
-puts "умно закодирована: #{s}"
 
+puts ''
+s = URI.smart_encode s
+puts "smart_encode: #{s}"
+
+puts ''
 s = URI.smart_decode s
-puts "умно раскодирована: #{s}"
+puts "smart_decode: #{s}"
 

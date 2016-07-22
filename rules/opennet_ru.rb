@@ -6,7 +6,7 @@ class OpennetRu < DefaultSite
 
 	def link_aliases
 		{
-			main_page: '^http://opennet\.ru$',
+			main_page: '^http[s]?://opennet\.ru$',
 			news_article: '/opennews/art\.shtml\?num=[0-9]+$',
 		}.merge(super)
 	end
@@ -15,11 +15,12 @@ class OpennetRu < DefaultSite
 		{
 			main_page: {
 				processor: :MainPage,
-				links: [ :news_article ],
+				links: {
+					list: [ :news_article ],
+				},
 			},
 			news_article: {
 				processor: :NewsArticle,
-				links: [],
 			},
 		}.merge(super)
 	end

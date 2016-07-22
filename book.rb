@@ -11,11 +11,11 @@ require 'colorize'
 class Book
 	# пользовательское
 	attr_reader :title, :author, :language
-	attr_accessor :page_limit, :error_limit, :depth_limit
+	attr_accessor :error_limit, :depth_limit
 	
 	# внутреннее
 	attr_accessor :page_count
-	attr_reader :text_dir, :images_dir, :contacts
+	attr_reader :text_dir, :image_dir, :contacts
 
 	@@db_name = 'links.sqlite3'
 	@@table_name = 'links'
@@ -28,14 +28,14 @@ class Book
 	@@threads_count = 3
 
 	def initialize
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 	
 		@title = 'Новая книга'
 		@author = 'Неизвестный автор'
 		@language = 'ru'
 		
 		# Для скачивания Википедии в заголовок необходимо вставлять контактную информацию
-		raise "Не найден файл контактов (#{@@contacts_file})" if ! File.exists?(@@contacts_file)
+		raise "Создайте файл '#{@@contacts_file}' с вашим адресом электронной точты (нужно для скачивания Википедии)" if ! File.exists?(@@contacts_file)
 		@contacts = File.read(@@contacts_file)
 
 		@source = []
@@ -101,6 +101,10 @@ class Book
 		@language = a_language
 	end
 
+	def page_limit=(n)
+		@page_limit=n
+		@error_limit=n
+	end
 
 	def threads=(n)
 		@@threads_count = n if n.to_i.to_s==n.to_s
@@ -123,8 +127,8 @@ class Book
 			threads = []
 			
 			links = get_fresh_links
-				#Msg::cyan "fresh links: #{links}"
-				Msg::debug "Ссылок на цикл: #{links.count}"
+				#Msg::debug "fresh links: #{links}"
+				#Msg::debug "Ссылок на цикл: #{links.count}"
 			
 			links.each do |row|
 				id = row[:id]
@@ -152,7 +156,7 @@ class Book
 			}
 		end
 		
-		puts "Подготовка завершена"
+		Msg::debug "Подготовка завершена"
 	end
 
 	def prepare_complete?
@@ -186,7 +190,7 @@ class Book
 	end
 	
 	def get_fresh_links
-		Msg::debug("#{self.class}.#{__method__}()")
+		#Msg::debug("#{self.class}.#{__method__}()")
 		
 		res = @@db.query("SELECT id, uri FROM #{@@table_name} WHERE status='new' LIMIT #{@@threads_count}")
 		
@@ -209,7 +213,7 @@ class Book
 	end
 
 	def get_rule(uri)
-		#Msg::debug("#{self.class}.#{__method__}(#{uri})")
+		Msg::debug("#{self.class}.#{__method__}(#{uri})")
 		
 		require "./#{@@rules_dir}/default.rb" if not Object.const_defined? :DefaultSite
 		
@@ -217,18 +221,19 @@ class Book
 		file_name = host.gsub('.','_') + '.rb'
 		class_name = host.split('.').map{|c| c.capitalize }.join
 		
-			#Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
+			Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
 		
 		case host
 		when 'opennet.ru'
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		when 'ru.wikipedia.org'
+			Msg::debug "./#{@@rules_dir}/#{file_name}"
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		else
 			require "./#{@@rules_dir}/default.rb"
-			rule = Object.const_get(:Default).new(uri)
+			rule = Object.const_get(:DefaultSite).new(uri)
 		end
 	end
 
@@ -247,7 +252,7 @@ class Book
 
 	# link_update({key:value [,key:value]},{key:value [,key:value]}
 	def link_update(params)
-		#Msg::debug("#{self.class}.#{__method__}(#{params})")
+		Msg::debug "#{self.class}.#{__method__}(#{params})"
 		
 		condition = params[:where]
 		data = params[:set]
@@ -303,32 +308,23 @@ class Book
 		
 	class Processor
 		
-		def initialize(book, id, uri)
-			#Msg::debug("#{self.class}.#{__method__}(#{id}, '#{uri}')")
+		def initialize(the_book, id, uri)
+			Msg::debug("#{self.class}.#{__method__}(#{the_book}, #{id}, '#{uri}')")
 			
-			the_uri = URI(uri)
-			
-			@book = book
+			@book = the_book
 			
 			@current_id = id
-			@current_uri = uri
-			@current_host = the_uri.host
-			@current_scheme = the_uri.scheme
-			@current_rule = @book.get_rule(@current_uri.to_s)
-				#Msg::debug " @current_rule: #{@current_rule}"
 			
-			@file_path = @book.uri2file_path(text: @current_uri)
-			@file_name = File.basename(@file_path)
-
-				#Msg::debug(" rule: #{@current_rule.class}")
+			consume_uri (uri)
 		end
 		
 		def work
 			Msg::debug("#{self.class}.#{__method__}()")
 			
 				Msg::debug '---------------------------------'
+			
 			@page = get_page(@current_uri)
-			@title = get_title(@page)
+			@title = detect_title(@page)
 			
 			result_page = @current_rule.process_page(@page)
 				
@@ -344,10 +340,40 @@ class Book
 			return @current_id
 		end
 		
-		def get_page(uri)
-			Msg::debug("#{self.class}.#{__method__}('#{uri}')")
+		def consume_uri(uri)
+			#Msg::debug("#{self.class}.#{__method__}('#{uri}')")
 			
-			uri = @current_rule.redirect(uri)
+			uri = URI(uri)
+			
+			@current_uri = uri.to_s
+			
+			@human_uri = URI.smart_decode(@current_uri)
+			
+			@current_host = uri.host
+			
+			@current_scheme = uri.scheme
+			
+			@current_rule = @book.get_rule(@current_uri)
+			
+				#Msg::debug " #{self.class}.@current_rule: #{@current_rule}"
+			
+			@file_path = @book.uri2file_path(text: @current_uri)
+			
+			@file_name = File.basename(@file_path)
+		end
+		
+		def get_page(uri)
+			#Msg::info("#{self.class}.#{__method__}('#{uri}')")
+			
+				Msg::green "загрузка '#{URI.smart_decode(uri)}'"
+			
+			new_uri = @current_rule.redirect(uri)
+			
+			if new_uri != uri then
+				#Msg::debug " новая ссылка '#{new_uri}'"
+				consume_uri(new_uri)
+				uri = new_uri
+			end
 			
 			data = download(uri: uri)
 			
@@ -378,7 +404,7 @@ class Book
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			#Msg::info("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
+			Msg::debug("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 				#Msg::debug " uri: #{uri}"
 				#Msg::debug " mode: #{mode}"
@@ -408,18 +434,11 @@ class Book
 
 
 			response = http.request(request)
+			
+				#Msg::cyan response
 
 			case response
-			when Net::HTTPRedirection then
-				location = response['location']
-					Msg::notice " http-перенаправление на '#{location}'"
-				
-				result =  send(__method__, {
-					uri: location, 
-					mode: mode,
-					redirects_limit: (redirects_limit-1),
-				})
-			when Net::HTTPSuccess then
+			when Net::HTTPSuccess
 				
 					#Msg::debug "response keys: #{response.to_h.keys}"
 			
@@ -433,8 +452,24 @@ class Book
 				else
 					return result
 				end
+			
+			when Net::HTTPRedirection
+			
+				location = response['location']
+					Msg::notice " http-перенаправление на '#{location}'"
+				
+				result =  send(__method__, {
+					uri: location, 
+					mode: mode,
+					redirects_limit: (redirects_limit-1),
+				})
+			
 			else
-				Msg::warning " неприемлемый ответ сервера: '#{response.value}"
+				@book.link_update(
+					set: {status: "error_#{response.code}" }, 
+					where: {id: @current_id}
+				)
+				raise " неприемлемый ответ сервера (#{response.code}, #{response.message}) для '#{@human_uri}' "
 				return nil
 			end
 		end
@@ -483,8 +518,15 @@ class Book
 				# сохраняю картинку в файл
 				begin
 					File.write(file_path, data[:data])
-					img[:src] = file_path
-					#img[:src] = uri # для настройки чёрного списка
+
+					related_path = File.join(
+						'..',
+						File.basename(@book.image_dir),
+						File.basename(file_path)
+					)
+						#Msg::info "image related path: #{related_path}"
+
+					img[:src] = related_path
 				rescue => e
 					Msg::warning "не удалось записать картинку '#{uri}' в файл '#{file_path}'"
 					next
@@ -494,7 +536,7 @@ class Book
 			return dom
 		end
 		
-		def get_title(dom)
+		def detect_title(dom)
 			#Msg::debug("#{self.class}.#{__method__}()")
 			
 			title = dom.search('//title').text
@@ -508,16 +550,15 @@ class Book
 			links = dom.search('//a').map { |a| a[:href] }.compact
 			links = links.map { |lnk| lnk.strip }
 			links = links.delete_if { |lnk| '#'==lnk[0] || lnk.empty? }
-				
 				#Msg::debug " всего ссылок: #{links.count}"
 				
 			links = links.uniq
-				
 				#Msg::debug " уникальных: #{links.count}"
 			
-			links_hash = links.map { |lnk| 
+			links_hash = links.map { |lnk|
 				begin
-					[lnk, complete_uri(lnk)]
+					lnk = URI.smart_encode(lnk)
+					[ lnk, complete_uri(lnk) ]
 				rescue => e
 					Msg::notice "ОТБРОШЕНА КРИВАЯ ССЫЛКА: #{lnk}"
 					nil
@@ -657,7 +698,7 @@ class Msg
 	#~ end
 	
 	def self.debug(msg)
-		puts msg.to_s
+		puts msg.to_s if $DEBUG
 	end
 	
 	def self.green(msg)
@@ -681,16 +722,15 @@ class Msg
 	end
 	
 	def self.warning(*msg)
-		STDERR.puts "ВНИМАНИЕ:".red
 		self.prepare_msg(msg).each {|m|
 			STDERR.puts m.to_s.red
 		}
 	end
 	
 	def self.error(*msg)
-		STDERR.puts "ОШИБКА:".black.on_red
+		STDERR.puts "ОШИБКА:".light_white.on_red
 		self.prepare_msg(msg).each {|m|
-			STDERR.puts m.to_s.black.on_red
+			STDERR.puts m.to_s.light_white.on_red
 		}
 	end
 	
@@ -719,12 +759,15 @@ end
 
 module URI
 	def self.smart_encode(str)
+		str = str.to_s
+		str = URI.smart_decode(str)
 		return str.gsub(/[^-a-z\/:?&_.~#]+/i) { |m|
 			URI.encode(m)
 		}
 	end
 
 	def self.smart_decode(str)
+		str = str.to_s
 		return str.gsub(/(%[0-9ABCDEF]{2})+/i) { |m|
 			URI.decode(m)
 		}
@@ -732,32 +775,45 @@ module URI
 end
 
 
-book = Book.new
+$DEBUG = false
 
+book = Book.new
 book.title = 'Пробная книга'
 book.author = 'Кумыков Андрей'
 book.language = 'ru'
 
+case ARGV.count
+when 0
+	Msg::info "режим внутреннего источника"
+	book.add_source 'http://opennet.ru'
+	#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
-#book.add_source 'http://opennet.ru'
-#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
+	#book.add_source 'https://ru.wikipedia.org'
+	#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-#book.add_source 'https://ru.wikipedia.org'
-#book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
-book.add_source 'https://ru.wikipedia.org/wiki/Linux'
-# насекомые:
-#book.add_source 'https://ru.wikipedia.org/wiki/%D0%9D%D0%B0%D1%81%D0%B5%D0%BA%D0%BE%D0%BC%D1%8B%D0%B5'
-# уховёртка:
-#book.add_source 'https://ru.wikipedia.org/wiki/%D0%A3%D1%85%D0%BE%D0%B2%D1%91%D1%80%D1%82%D0%BA%D0%B0_%D0%BE%D0%B1%D1%8B%D0%BA%D0%BD%D0%BE%D0%B2%D0%B5%D0%BD%D0%BD%D0%B0%D1%8F'
-#book.add_source 'https://ru.wikipedia.org/w/index.php?title=Linux&printable=yes'
-
-
-book.page_limit = 5
-
-book.threads = 2
+	#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	
+	# с ошибками
+	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
+	#book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
+	
+	book.threads = 1
+	
+	book.page_limit = 1
+	
+	book.error_limit = 1
+else
+	Msg::info "режим внешнего источника"
+	
+	ARGV.each { |uri| book.add_source(uri) }
+	
+	book.page_limit=ARGV.count
+	
+	book.threads=1
+end
 
 book.prepare
 book.save
 
-puts ''
-puts book.inspect
+Msg::debug ''
+Msg::debug book.inspect

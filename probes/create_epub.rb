@@ -3,7 +3,26 @@
 system 'clear'
 
 require 'sqlite3'
+require 'securerandom'
 require 'awesome_print'
+require 'find'
+require 'zip'
+
+
+def show_usage
+	STDERR.puts "Использование: #{__FILE__} <файл БД> <каталог-источник>"
+	exit 1
+end
+
+case ARGV.count
+when 2
+	db_file = ARGV.first
+	source_dir = ARGV.last
+else
+	show_usage
+	exit 1
+end
+
 
 class Book
 
@@ -12,11 +31,10 @@ class Book
 		
 		@db = SQLite3::Database.new db_file
 		@db.results_as_hash = true
-		
 		@table_name = 'links'
 	end
 
-	def get_structure
+	def get_book_array
 		Msg.debug "#{self.class}.#{__method__}()"
 		
 		def get_toc_items(arg)
@@ -27,8 +45,8 @@ class Book
 			
 			res.each { |row|
 				list << {
-					:id => row['id'],
-					:parent_id => row['parent_id'],
+					:id => Digest::MD5.hexdigest(row['id'].to_s),
+					:parent_id => row['parent_id'].to_s,
 					:title => row['title'],
 					:file => row['file'],
 					:uri => row['uri'],
@@ -42,30 +60,35 @@ class Book
 		return get_toc_items(parent_id: 0)
 	end
 
-	def create_epub (output_file, bookArray, metadata)
+	def create_epub (source_dir, output_file, book_array, metadata)
 		Msg.info "#{__method__}('#{output_file}')"
 		
-		#puts "\n=================================== bookArray =================================="
-		#ap bookArray
+		@metadata = metadata
+		@text_dir = 'text'
 		
-		# arg = { :bookArray, :metadata }
+		#puts "\n=================================== book_array =================================="
+		#ap book_array
+		
+		# arg = { :book_array, :metadata }
 		def MakeNcx(arg)
 			Msg.debug "#{__method__}()"
 			
-			# arg = { :bookArray, :depth }
-			def MakeNavPoint(bookArray, depth)
+			# arg = { :book_array, :depth }
+			def MakeNavPoint(book_array, depth)
 				
 				navPoints = ''
 				
-				bookArray.each { |item|
+				book_array.each { |item|
 					#puts "===================== item ========================"
 					#ap item
 					
-					id = Digest::MD5.hexdigest(item[:id])
+					id = Digest::MD5.hexdigest(item[:id].to_s)
 					
 					if not item[:childs].empty? then
 						
 						dir_id = SecureRandom.uuid
+						
+							#puts "#{@text_dir}/#{item[:file]}"
 					
 						navPoints += <<NCX
 <navPoint id='#{dir_id}'>
@@ -108,7 +131,11 @@ NCX
 			end
 
 
-			nav_data = MakeNavPoint(arg[:bookArray],0)
+			nav_data = MakeNavPoint(arg[:book_array],0)
+			
+				puts "------------------------- nav_data --------------------------"
+				ap nav_data
+			
 			metadata = arg[:metadata]
 
 			ncx = <<NCX_DATA
@@ -132,18 +159,18 @@ NCX_DATA
 			return ncx
 		end
 		
-		# arg = { :bookArray, :metadata }
+		# arg = { :book_array, :metadata }
 		def MakeOpf(arg)
 			Msg.debug "#{__method__}()"
 			
 			# manifest - опись содержимого
-			def makeManifest(bookArray)
+			def makeManifest(book_array)
 				Msg.debug "#{__method__}()"
 				
 				output = ''
 				
-				bookArray.each{ |item|
-					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
+				book_array.each{ |item|
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id].to_s)
 					output += <<MANIFEST
 	<item href='#{@text_dir}/#{item[:file]}' id='#{id}'  media-type='application/xhtml+xml' />
 MANIFEST
@@ -154,13 +181,13 @@ MANIFEST
 			end
 			
 			# spine - порядок пролистывания
-			def makeSpine(bookArray)
+			def makeSpine(book_array)
 				Msg.debug "#{__method__}()"
 				
 				output = ''
 
-				bookArray.each { |item|
-					id = 'opf_' + Digest::MD5.hexdigest(item[:id])
+				book_array.each { |item|
+					id = 'opf_' + Digest::MD5.hexdigest(item[:id].to_s)
 					output += "\n\t<itemref idref='#{id}' />";
 					output += self.makeSpine(item[:childs]) if not item[:childs].empty?
 				}
@@ -169,12 +196,12 @@ MANIFEST
 			end
 			
 			# guide - это семантика файлов
-			def makeGuide(bookArray)
+			def makeGuide(book_array)
 				Msg.debug "#{__method__}()"
 				
 				output = ''
 				
-				bookArray.each { |item|
+				book_array.each { |item|
 					output += "\n\t<reference href='#{@text_dir}/#{item[:file]}' title='#{item[:title]}' type='text' />"
 					output += self.makeGuide(item[:childs]) if not item[:childs].empty?
 				}
@@ -182,9 +209,9 @@ MANIFEST
 				return output
 			end
 				
-			manifest = makeManifest(arg[:bookArray])
-			spine = makeSpine(arg[:bookArray])
-			guide = makeGuide(arg[:bookArray])
+			manifest = makeManifest(arg[:book_array])
+			spine = makeSpine(arg[:book_array])
+			guide = makeGuide(arg[:book_array])
 
 			metadata = arg[:metadata]
 			
@@ -215,6 +242,7 @@ OPF_DATA
 		def createZipFile(zip_file, source_path)
 			Msg.info "#{__method__}(#{zip_file},#{source_path})"
 			Find.find(source_path) do |input_item|
+				#Msg::debug input_item
 				Zip::File.open(zip_file, Zip::File::CREATE) do |zipfile|
 					virtual_item = input_item.strip.gsub( source_path, '' ).gsub(/^[\/]*/,'')
 					next if virtual_item.empty?
@@ -225,10 +253,10 @@ OPF_DATA
 		
 		
 		# создание дерева каталогов под epub-книгу
-		epub_dir = @book_dir + '/' + 'epub'
-		meta_dir = epub_dir + '/META-INF'
-		oebps_dir = epub_dir + '/OEBPS'
-		oebps_text_dir = oebps_dir + '/Text'
+		epub_dir = source_dir
+		meta_dir = File.join(epub_dir, 'META-INF')
+		oebps_dir = File.join(epub_dir, 'OEBPS')
+		oebps_text_dir = File.join(oebps_dir, 'text')
 		
 		#~ begin
 			#~ FileUtils.rm_rf(epub_dir)
@@ -239,8 +267,9 @@ OPF_DATA
 		Dir.mkdir(epub_dir) if not Dir.exists?(epub_dir)
 		Dir.mkdir(meta_dir) if not Dir.exists?(meta_dir)
 		Dir.mkdir(oebps_dir) if not Dir.exists?(oebps_dir)
-		Dir.mkdir(oebps_text_dir) if not Dir.exists?(oebps_text_dir)
-		
+		#Dir.mkdir(oebps_text_dir) if not Dir.exists?(oebps_text_dir)
+		#system "tree #{epub_dir}"
+
 		# создание служебных(?) файлов
 		File.open(epub_dir + '/mimetype','w') { |file|
 			file.write('application/epub+zip')
@@ -257,8 +286,8 @@ DATA
 		}
 		
 		# создание и запись NCX и OPF
-		ncxData = MakeNcx(:bookArray => bookArray,:metadata => metadata)
-		opfData = MakeOpf(:bookArray => bookArray,:metadata => metadata)
+		ncxData = MakeNcx(:book_array => book_array,:metadata => metadata)
+		opfData = MakeOpf(:book_array => book_array,:metadata => metadata)
 		
 		File.open(epub_dir + '/OEBPS/toc.ncx','w') { |file|
 			file.write(ncxData)
@@ -268,15 +297,28 @@ DATA
 			file.write(opfData)
 		}
 		
-		Msg.debug "\n=================================== NCX =================================="
-		Msg.debug ncxData
-		Msg.debug "\n=================================== OPF =================================="
-		Msg.debug opfData
+		#Msg.debug "\n=================================== NCX =================================="
+		#Msg.debug ncxData
+		#Msg.debug "\n=================================== OPF =================================="
+		#Msg.debug opfData
 		
 		# Перемещаю html-файлы в дерево EPUB
-		Dir.entries(@book_dir).each { |file_name|
-			File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
-		}
+		#Dir.entries(@book_dir).each { |file_name|
+		#	File.rename(@book_dir + '/' + file_name, oebps_text_dir + '/' + file_name) if file_name.match(/\.html$/)
+		#}
+		
+		source_text_dir = File.join(epub_dir,@text_dir)
+		source_images_dir = File.join(epub_dir,'images')
+		
+		File.rename(
+			source_text_dir, 
+			File.join(oebps_text_dir)
+		) if File.exists? source_text_dir
+		
+		#~ File.rename(
+			#~ source_images_dir, 
+			#~ File.join(oebps_dir, 'images')
+		#~ ) if File.exists? source_images_dir
 		
 		# Создаю EPUB-файл
 		createZipFile( output_file, epub_dir + '/')
@@ -344,5 +386,17 @@ end
 
 
 book = Book.new(ARGV[0])
-toc = book.get_structure
- ap toc
+
+book_array = book.get_book_array
+	ap book_array
+
+metadata = {
+	title: 'Пробный epub-файл',
+	author: 'Андрюха Кумыч',
+	language: 'ru',
+	id: SecureRandom::uuid,
+	generator_name: 'book3',
+	generator_version: '0.0.1-азъ0',
+}
+
+book.create_epub(source_dir, 'book3.epub', book_array, metadata)
