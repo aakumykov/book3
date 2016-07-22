@@ -282,7 +282,7 @@ class Book
 		when :text
 			dir = @text_dir
 			name = uri
-			ext = 'html'
+			ext = 'xhtml'
 		when :image
 			dir = @image_dir
 			name = uri
