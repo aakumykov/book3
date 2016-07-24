@@ -7,10 +7,11 @@ class RuWikipediaOrg < DefaultSite
 	def link_aliases
 		title_pattern = '?<title>[^/:?=]+'
 		{
-			main_page: [
-				'^http[s]?://ru\.wikipedia\.org$',
-				'^http[s]?://ru\.wikipedia\.org/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0$',
-			],
+			#~ main_page: [
+				#~ '^http[s]?://ru\.wikipedia\.org$',
+				#~ '^http[s]?://ru\.wikipedia\.org/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0$',
+			#~ ],
+			main_page: '^http[s]?://ru\.wikipedia\.org/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0$',
 			an_article: '^http[s]?://ru\.wikipedia\.org/wiki/('+title_pattern+')$',
 			printable_article: '^http[s]?://ru\.wikipedia\.org/w/index\.php\?title=('+title_pattern+')&printable=yes',
 		}.merge(super)

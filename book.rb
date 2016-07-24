@@ -776,7 +776,7 @@ when 0
 	#book.add_source 'https://ru.wikipedia.org/wiki/Открытый_код?action=edit' # в get_rule
 	
 	book.threads = 1
-	book.page_limit = 3
+	book.page_limit = 1
 	book.error_limit = 3
 else
 	Msg::info "режим внешнего источника"
