@@ -90,6 +90,7 @@ class DefaultSite
 
 	private
 	
+	# внутренние методы-геттеры
 	def link_aliases
 		{ 
 			any_page: '^.+$',
@@ -107,6 +108,10 @@ class DefaultSite
 		}
 	end
 	
+	def image_mode
+		'blacklist'
+	end
+	
 	def image_whitelist
 		[ '.*' ]
 	end
@@ -122,16 +127,13 @@ class DefaultSite
 	end
 
 	
-	## Служебные методы
-
-	# методы-подготовщики
+	# служебные методы
 	def prepare_wb_list(list)
 		list = list.flatten.sort_by{|pat| pat.length}.reverse
 		list = list.map{|pat| Regexp.new(pat)}
 		Regexp.union(list)
 	end
 		
-	# методы-слуги
 	def get_rule(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
@@ -168,14 +170,12 @@ class DefaultSite
 	end
 
 	
-	## Методы-обработчики
-
-	# страничные методы
+	# обработчики страниц
 	def AnyPage(dom)
 		dom.search('//body')
 	end
 	
-	# фильтры
+	# фильтры страниц
 	def RemoveTag(dom,tag_name)
 		dom.search("//#{tag_name}").each { |s|
 			s.remove

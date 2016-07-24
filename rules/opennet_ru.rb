@@ -48,7 +48,7 @@ class OpennetRu < DefaultSite
 		]
 	end
 	
-
+	# обработчики страниц
 	def MainPage(dom)
 		dom.search('//body//table')[2]
 	end
