@@ -221,14 +221,13 @@ class Book
 		file_name = host.gsub('.','_') + '.rb'
 		class_name = host.split('.').map{|c| c.capitalize }.join
 		
-			Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
+			#Msg::debug(" host: #{host}, file_name: #{file_name}, class_name: #{class_name}")
 		
 		case host
 		when 'opennet.ru'
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		when 'ru.wikipedia.org'
-			Msg::debug "./#{@@rules_dir}/#{file_name}"
 			require "./#{@@rules_dir}/#{file_name}"
 			rule = Object.const_get(class_name).new(uri)
 		else
@@ -355,7 +354,7 @@ class Book
 			
 			@current_rule = @book.get_rule(@current_uri)
 			
-				#Msg::debug " #{self.class}.@current_rule: #{@current_rule}"
+				#Msg::debug " @current_rule: #{@current_rule}"
 			
 			@file_path = @book.uri2file_path(text: @current_uri)
 			
@@ -681,7 +680,7 @@ class Msg
 	#~ end
 	
 	def self.debug(msg)
-		puts msg.to_s if $DEBUG
+		puts msg.to_s if $DEBUG_IT
 	end
 	
 	def self.green(msg)
@@ -758,7 +757,7 @@ module URI
 end
 
 
-$DEBUG = false
+$DEBUG_IT = true
 
 book = Book.new
 book.title = 'Пробная книга'
@@ -768,13 +767,14 @@ book.language = 'ru'
 case ARGV.count
 when 0
 	Msg::info "режим внутреннего источника"
-	book.add_source 'http://opennet.ru'
+	
+	#book.add_source 'http://opennet.ru'
 	#book.add_source 'http://opennet.ru/opennews/art.shtml?num=44711'
 
 	#book.add_source 'https://ru.wikipedia.org'
 	book.add_source 'https://ru.wikipedia.org/wiki/Заглавная_страница'
 
-	book.add_source 'https://ru.wikipedia.org/wiki/Linux'
+	#book.add_source 'https://ru.wikipedia.org/wiki/Linux'
 	
 	# с ошибками
 	#book.add_source 'https://ru.wikipedia.org/wiki/Обсуждение' # 404
