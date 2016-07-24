@@ -376,17 +376,16 @@ class Book
 			end
 			
 			data = download(uri: uri)
-				Msg::debug " скачал '#{uri}'"
 			
 			page = recode_page(data[:data], data[:headers])
-				Msg::debug " перекодировал страницу: #{page.lines.count} строк, #{page.bytes.count} байт"
+				#Msg::debug " страница: #{page.lines.count} строк, #{page.bytes.count} байт"
+				#File.write('page2.html', page)
 			
 			page = Nokogiri::XML(page) { |config|
 				config.nonet
 				config.noerror
 				config.noent
 			}
-				Msg::debug " создал #{page.class}"
 			
 			page
 		end
@@ -759,7 +758,7 @@ module URI
 end
 
 
-$DEBUG = true
+$DEBUG = false
 
 book = Book.new
 book.title = 'Пробная книга'

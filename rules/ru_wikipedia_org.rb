@@ -66,7 +66,6 @@ class RuWikipediaOrg < DefaultSite
 		]
 	end
 	
-	# обработчики страниц
 	def MainPage(dom)
 		dom.search("//div[@id='content']")
 	end
@@ -77,7 +76,7 @@ class RuWikipediaOrg < DefaultSite
 		return dom
 	end
 	
-	# фильтры страниц
+	# страничные фильтры
 	def RemoveNavigation(dom)
 		[
 			"//div[@id='mw-navigation']",
