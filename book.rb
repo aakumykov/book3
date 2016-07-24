@@ -364,8 +364,6 @@ class Book
 		def get_page(uri)
 			#Msg::info("#{self.class}.#{__method__}('#{uri}')")
 			
-				Msg::green "загрузка '#{URI.smart_decode(uri)}'"
-			
 			new_uri = @current_rule.redirect(uri)
 			
 			if new_uri != uri then
@@ -402,11 +400,8 @@ class Book
 			mode = arg.fetch(:mode,:full).to_s
 			redirects_limit = arg[:redirects_limit] || 10	# опасная логика...
 			
-			Msg::debug("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
-			
-				#Msg::debug " uri: #{uri}"
-				#Msg::debug " mode: #{mode}"
-				#Msg::debug " redirects_limit: #{redirects_limit}"
+				Msg::green "загружаю #{uri}"
+				Msg::debug("#{self.class}.#{__method__}('#{uri}', mode: #{mode})")
 			
 			if 0==redirects_limit then
 				Msg::warning " слишком много пененаправлений"
@@ -507,7 +502,7 @@ class Book
 				
 				# скачиваю картинку
 				begin
-					Msg::info " получаю картинку '#{File.basename(file_path)}'"
+					Msg::debug " получаю картинку '#{File.basename(file_path)}'"
 					data = download(uri: uri)
 				rescue => e
 					Msg::warning "не удалось загрузить картинку '#{uri}' (#{e.message})"
@@ -757,7 +752,7 @@ module URI
 end
 
 
-$DEBUG_IT = true
+$DEBUG_IT = false
 
 book = Book.new
 book.title = 'Пробная книга'

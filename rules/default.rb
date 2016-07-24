@@ -7,7 +7,7 @@ class DefaultSite
 		
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
-		@page_rule = get_rule(uri)
+		@page_rule = find_rule(uri)
 			#Msg::debug " page_rule: #{@page_rule}"
 		
 		@filters = @page_rule[:filters] || []
@@ -132,11 +132,11 @@ class DefaultSite
 	end
 		
 	# методы-слуги
-	def get_rule(uri)
+	def find_rule(uri)
 		#Msg::debug "#{self.class}.#{__method__}(#{uri}, #{uri.class}))"
 		
 		link_alias = uri2alias(uri)
-			#Msg::debug " псевдоним сылки: #{link_alias}"
+			Msg::info " #{link_alias}: #{uri}"
 		
 		rule = name2rule(link_alias)
 			#Msg::debug " правило: #{rule}"
