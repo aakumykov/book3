@@ -8,7 +8,7 @@ class DefaultSite
 		@link_aliases = link_aliases.sort_by { |name,pattern| pattern.length }.reverse.to_h
 		
 		@page_rule = get_rule(uri)
-			Msg::debug " page_rule: #{@page_rule}"
+			#Msg::debug " page_rule: #{@page_rule}"
 		
 		@filters = @page_rule[:filters] || []
 		
