@@ -45,9 +45,9 @@ class DefaultSite
 		white = !src.strip.match(@image_whitelist).nil?
 		
 		case image_mode.to_sym
-		when :blacklist
+		when :black
 			!black
-		when :whitelist
+		when :white
 			white
 		when :white_black
 			white && !black
@@ -105,6 +105,10 @@ class DefaultSite
 				},
 			},
 		}
+	end
+	
+	def image_mode
+		'black'
 	end
 	
 	def image_whitelist
